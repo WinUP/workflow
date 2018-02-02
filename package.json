@@ -1,0 +1,20 @@
+{
+  "name": "@ekifvk/workflow",
+  "version": "1.0.0",
+  "description": "Simple Workflow controller",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "workflow"
+  ],
+  "author": "Lundarl Gholoi",
+  "license": "MIT",
+  "dependencies": {
+    "uuid": "^3.2.1"
+  },
+  "devDependencies": {
+    "@types/uuid": "^3.4.3"
+  }
+}
