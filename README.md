@@ -14,7 +14,7 @@ with features:
 * Asynchronized data stream
 * Relations can use javascript code to allow full or part data transfer from one producer to another
 
-![](docs/sequence.png)
+![](https://raw.githubusercontent.com/WinUP/workflow/master/docs/sequence.png)
 
 For example, in this case, run sequence should be 1 -> 2-1 -> 3 -> 2-2 -> 4 automatically.
 
