@@ -1,5 +1,7 @@
+import { WorkflowDefinition, RelationDefinition } from './Definition';
 import { ProduceResult } from './ProduceResult';
 import { Producer } from './Producer';
+import { Relation } from './Relation';
 
 /**
  * Workflow manager
@@ -14,6 +16,64 @@ export class WorkflowManager {
         return this._entrance;
     } public set entrance(value) {
         this._entrance = value;
+    }
+
+    /**
+     * Load workflow fronm definitions
+     * @param activator A function that using given type string and return an instance of Producer or null (if cannot declare producer)
+     * @param definitions All workflow definitions
+     */
+    public static fromDefinitions(activator: (type: string) => ((new (id?: string) => Producer) | null),
+        ...definitions: WorkflowDefinition[]): WorkflowManager {
+        const producers: Producer[] = [];
+        const relations: RelationDefinition[] = [];
+        let entranceId: string | null = null;
+        definitions.forEach(definition => {
+            if (definition.entrance) {
+                if (entranceId) {
+                    throw new TypeError(`Cannot set ${definition.entrance} as entrance point: Entrance has already set to ${entranceId}`);
+                }
+                entranceId = definition.entrance;
+            }
+            definition.producers.forEach(producer => {
+                if (producers.some(p => p.id === producer.id)) {
+                    throw new TypeError(`Cannot add producer ${producer.id}: Id conflict`);
+                }
+                const instanceActivator = activator(producer.type);
+                if (!instanceActivator) {
+                    throw new ReferenceError(`Cannot declare producer ${producer.id}: Activator returns nothing`);
+                }
+                const instance = new instanceActivator(producer.id);
+                instance.initialize(...producer.parameters);
+                producers.push(instance);
+            });
+            definition.relations.forEach(relation => {
+                if (relations.some(r => r.from === relation.from && r.to === relation.to)) {
+                    throw new TypeError(`Cannot register relation: ${relation.from} -> ${relation.to} is already exist`);
+                }
+                relations.push(relation);
+            });
+        });
+        const entrance = producers.find(p => p.id === entranceId);
+        if (!entrance) {
+            throw new ReferenceError(`Cannot generate workflow: No entrance point (prefer id ${entranceId})`);
+        }
+        relations.forEach(relation => {
+            const from = producers.find(p => p.id === relation.from);
+            if (!from) {
+                throw new ReferenceError(
+                    `Cannot add relation ${relation.from} -> ${relation.to}: Parent with id ${relation.from} is not exist`);
+            }
+            const to = producers.find(p => p.id === relation.to);
+            if (!to) {
+                throw new ReferenceError(
+                    `Cannot add relation ${relation.from} -> ${relation.to}: Child with id ${relation.from} is not exist`);
+            }
+            from!.relation(new Relation(from, to, relation.condition ? relation.condition : undefined));
+        });
+        const result = new WorkflowManager();
+        result.entrance = entrance;
+        return result;
     }
 
     /**

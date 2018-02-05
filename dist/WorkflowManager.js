@@ -35,6 +35,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+var Relation_1 = require("./Relation");
 /**
  * Workflow manager
  */
@@ -55,6 +56,64 @@ var WorkflowManager = /** @class */ (function () {
         enumerable: true,
         configurable: true
     });
+    /**
+     * Load workflow fronm definitions
+     * @param activator A function that using given type string and return an instance of Producer or null (if cannot declare producer)
+     * @param definitions All workflow definitions
+     */
+    WorkflowManager.fromDefinitions = function (activator) {
+        var definitions = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            definitions[_i - 1] = arguments[_i];
+        }
+        var producers = [];
+        var relations = [];
+        var entranceId = null;
+        definitions.forEach(function (definition) {
+            if (definition.entrance) {
+                if (entranceId) {
+                    throw new TypeError("Cannot set " + definition.entrance + " as entrance point: Entrance has already set to " + entranceId);
+                }
+                entranceId = definition.entrance;
+            }
+            definition.producers.forEach(function (producer) {
+                if (producers.some(function (p) { return p.id === producer.id; })) {
+                    throw new TypeError("Cannot add producer " + producer.id + ": Id conflict");
+                }
+                var instanceActivator = activator(producer.type);
+                if (!instanceActivator) {
+                    throw new ReferenceError("Cannot declare producer " + producer.id + ": Activator returns nothing");
+                }
+                var instance = new instanceActivator(producer.id);
+                instance.initialize.apply(instance, producer.parameters);
+                producers.push(instance);
+            });
+            definition.relations.forEach(function (relation) {
+                if (relations.some(function (r) { return r.from === relation.from && r.to === relation.to; })) {
+                    throw new TypeError("Cannot register relation: " + relation.from + " -> " + relation.to + " is already exist");
+                }
+                relations.push(relation);
+            });
+        });
+        var entrance = producers.find(function (p) { return p.id === entranceId; });
+        if (!entrance) {
+            throw new ReferenceError("Cannot generate workflow: No entrance point (prefer id " + entranceId + ")");
+        }
+        relations.forEach(function (relation) {
+            var from = producers.find(function (p) { return p.id === relation.from; });
+            if (!from) {
+                throw new ReferenceError("Cannot add relation " + relation.from + " -> " + relation.to + ": Parent with id " + relation.from + " is not exist");
+            }
+            var to = producers.find(function (p) { return p.id === relation.to; });
+            if (!to) {
+                throw new ReferenceError("Cannot add relation " + relation.from + " -> " + relation.to + ": Child with id " + relation.from + " is not exist");
+            }
+            from.relation(new Relation_1.Relation(from, to, relation.condition ? relation.condition : undefined));
+        });
+        var result = new WorkflowManager();
+        result.entrance = entrance;
+        return result;
+    };
     /**
      * Run this workflow
      * @param input Input data

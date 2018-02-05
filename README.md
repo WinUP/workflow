@@ -18,7 +18,7 @@ with features:
 
 For example, in this case, run sequence should be 1 -> 2-1 -> 3 -> 2-2 -> 4 automatically.
 
-#### How to use
+### How to use
 
 0. Install.
 
@@ -47,7 +47,7 @@ For example, in this case, run sequence should be 1 -> 2-1 -> 3 -> 2-2 -> 4 auto
 
         manager.run(/* input data */).then(...);
 
-#### How to write producer
+### How to write producer
 
 All producers must extend Producer, which is an abstract class, they must have three function implementations:
 
@@ -79,3 +79,38 @@ export class KeyValuePairProducer extends Producer {
     }
 }
 ```
+
+### Static workflow definition
+
+A JSON object can be created to define a workflow or part of workflow:
+
+```json
+{
+    "producers": [],
+    "relations": [],
+    "entrance": "String. Optional. Entrance producer's ID."
+}
+```
+
+Elements in producers should follow this structure:
+
+```json
+{
+    "id": "String. ID of this producer",
+    "type": "String. the type of this producer. Normally if producer class's name is <name>Producer, then <name> is the type of that producer.",
+    "parameters": ["Array<any>. Parameters of this producer initializer."],
+    "description": "String. Optional. Description of this producer."
+}
+```
+
+Elements in relations should follow this structure:
+
+```json
+{
+    "from": "String. Parent producer's ID.",
+    "to": "String. Child producer's ID.",
+    "condition": "String or null. Condition of this relation (in JavaScript)."
+}
+```
+
+Call WorkflowManager.fromDefinitions() and provide all definition objects to get a workflow. The first paramater should be a function, which has a string param as type to return an instance of Producer. Rest params will be combined to one, please notice that one and only one of them must has entrance property.

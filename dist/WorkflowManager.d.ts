@@ -1,3 +1,4 @@
+import { WorkflowDefinition } from './Definition';
 import { ProduceResult } from './ProduceResult';
 import { Producer } from './Producer';
 /**
@@ -9,6 +10,12 @@ export declare class WorkflowManager {
      * Entrance producer
      */
     entrance: Producer | null;
+    /**
+     * Load workflow fronm definitions
+     * @param activator A function that using given type string and return an instance of Producer or null (if cannot declare producer)
+     * @param definitions All workflow definitions
+     */
+    static fromDefinitions(activator: (type: string) => ((new (id?: string) => Producer) | null), ...definitions: WorkflowDefinition[]): WorkflowManager;
     /**
      * Run this workflow
      * @param input Input data

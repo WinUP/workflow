@@ -118,7 +118,7 @@ export abstract class Producer {
     }
 
     /**
-     * Initialise producer
+     * initialize producer
      * @param params Parameter list
      */
     public abstract initialize(...params: any[]): void;

@@ -59,7 +59,7 @@ export declare abstract class Producer {
      */
     isRunningConditionSatisfied(finishedProducers: Producer[], skippedProducers: Producer[]): boolean;
     /**
-     * Initialise producer
+     * initialize producer
      * @param params Parameter list
      */
     abstract initialize(...params: any[]): void;
