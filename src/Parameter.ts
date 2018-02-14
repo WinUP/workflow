@@ -15,6 +15,14 @@ export interface Parameter {
      */
     subparams?: Parameter[];
     /**
+     * Is optional
+     */
+    optional: boolean;
+    /**
+     * Default value. If this exist, parameter should be optional
+     */
+    default?: any;
+    /**
      * Description
      */
     description: string;

@@ -1,10 +1,10 @@
 {
   "name": "@ekifvk/workflow",
-  "version": "1.2.1",
+  "version": "1.2.6",
   "description": "Simple Workflow controller",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepublish": "npm run build",
+    "build": "tsc"
   },
   "keywords": [
     "workflow"
@@ -16,5 +16,7 @@
   },
   "devDependencies": {
     "@types/uuid": "^3.4.3"
-  }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts"
 }

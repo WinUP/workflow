@@ -93,7 +93,8 @@ export class WorkflowManager {
             const afterRunning: ProduceResult<any>[] = [];
             for (let i = 0; i < running.length; i++) {
                 const runner = running[i];
-                if (runner.producer.isRunningConditionSatisfied(finished, skipped)) {
+                if (!afterRunning.some(r => r.producer === runner.producer)
+                    && runner.producer.isRunningConditionSatisfied(finished, skipped)) {
                     const result = runner.producer.produce(runner.data);
                     const syncResult = result instanceof Promise ? await result : result;
                     finished.push(runner.producer);
@@ -112,7 +113,12 @@ export class WorkflowManager {
                         }
                     });
                 } else {
-                    afterRunning.push(runner);
+                    const existedRunner = afterRunning.find(r => r.producer === runner.producer);
+                    if (existedRunner) {
+                        existedRunner.data = [...existedRunner.data, ...runner.data];
+                    } else {
+                        afterRunning.push(runner);
+                    }
                 }
             }
             running = afterRunning;

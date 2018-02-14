@@ -139,12 +139,13 @@ var WorkflowManager = /** @class */ (function () {
                                     case 0:
                                         afterRunning = [];
                                         _loop_2 = function (i) {
-                                            var runner, result, syncResult_1, _a;
+                                            var runner, result, syncResult_1, _a, existedRunner;
                                             return __generator(this, function (_b) {
                                                 switch (_b.label) {
                                                     case 0:
                                                         runner = running[i];
-                                                        if (!runner.producer.isRunningConditionSatisfied(finished, skipped)) return [3 /*break*/, 4];
+                                                        if (!(!afterRunning.some(function (r) { return r.producer === runner.producer; })
+                                                            && runner.producer.isRunningConditionSatisfied(finished, skipped))) return [3 /*break*/, 4];
                                                         result = runner.producer.produce(runner.data);
                                                         if (!(result instanceof Promise)) return [3 /*break*/, 2];
                                                         return [4 /*yield*/, result];
@@ -174,7 +175,13 @@ var WorkflowManager = /** @class */ (function () {
                                                         });
                                                         return [3 /*break*/, 5];
                                                     case 4:
-                                                        afterRunning.push(runner);
+                                                        existedRunner = afterRunning.find(function (r) { return r.producer === runner.producer; });
+                                                        if (existedRunner) {
+                                                            existedRunner.data = existedRunner.data.concat(runner.data);
+                                                        }
+                                                        else {
+                                                            afterRunning.push(runner);
+                                                        }
                                                         _b.label = 5;
                                                     case 5: return [2 /*return*/];
                                                 }
