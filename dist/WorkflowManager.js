@@ -216,6 +216,34 @@ var WorkflowManager = /** @class */ (function () {
             });
         });
     };
+    WorkflowManager.prototype.validate = function () {
+        if (this._entrance) {
+            var touchable_1 = [this._entrance];
+            var allNode = [];
+            this.generateMap(this._entrance, 'down', touchable_1, allNode);
+            return allNode.filter(function (node) { return !touchable_1.includes(node); });
+        }
+        else {
+            return [];
+        }
+    };
+    WorkflowManager.prototype.generateMap = function (entrance, searchDirection, touchable, allNode) {
+        var _this = this;
+        if (!allNode.includes(entrance)) {
+            allNode.push(entrance);
+        }
+        if (searchDirection === 'down' || searchDirection === 'both') {
+            entrance.children.filter(function (child) { return !touchable.includes(child.to); }).forEach(function (child) {
+                touchable.push(child.to);
+                _this.generateMap(child.to, 'both', touchable, allNode);
+            });
+        }
+        if (searchDirection === 'up' || searchDirection === 'both') {
+            entrance.parents.forEach(function (parent) {
+                _this.generateMap(parent.from, 'up', touchable, allNode);
+            });
+        }
+    };
     WorkflowManager.skipProducer = function (target, skipped) {
         skipped.push(target);
         target.children.forEach(function (child) {

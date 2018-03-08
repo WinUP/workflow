@@ -17,7 +17,7 @@ export declare class Relation {
     /**
      * Get relation's condition
      */
-    readonly code: string;
+    readonly code: string | ((input: any) => boolean);
     constructor(from: Producer, to: Producer, code?: string);
     /**
      * Test the condition

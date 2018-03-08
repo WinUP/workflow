@@ -45,7 +45,12 @@ var Relation = /** @class */ (function () {
      * @param input Data using in this test
      */
     Relation.prototype.judge = function (input) {
-        return eval("(function(input){" + this._code + "})(input)") ? true : false;
+        if (typeof this._code === 'string') {
+            return eval("(function(input){" + this._code + "})(input)") ? true : false;
+        }
+        else {
+            return this._code(input) ? true : false;
+        }
     };
     return Relation;
 }());

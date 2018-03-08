@@ -126,6 +126,34 @@ export class WorkflowManager {
         return dataPool;
     }
 
+    public validate(): Producer[] {
+        if (this._entrance) {
+            const touchable: Producer[] = [this._entrance];
+            const allNode: Producer[] = [];
+            this.generateMap(this._entrance, 'down', touchable, allNode);
+            return allNode.filter(node => !touchable.includes(node));
+        } else {
+            return [];
+        }
+    }
+
+    private generateMap(entrance: Producer, searchDirection: 'up' | 'down' | 'both', touchable: Producer[], allNode: Producer[]): void {
+        if (!allNode.includes(entrance)) {
+            allNode.push(entrance);
+        }
+        if (searchDirection === 'down' || searchDirection === 'both') {
+            entrance.children.filter(child => !touchable.includes(child.to)).forEach(child => {
+                touchable.push(child.to);
+                this.generateMap(child.to, 'both', touchable, allNode);
+            });
+        }
+        if (searchDirection === 'up' || searchDirection === 'both') {
+            entrance.parents.forEach(parent => {
+                this.generateMap(parent.from, 'up', touchable, allNode);
+            });
+        }
+    }
+
     private static skipProducer(target: Producer, skipped: Producer[]): void {
         skipped.push(target);
         target.children.forEach(child => {

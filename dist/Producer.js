@@ -7,7 +7,7 @@ var UUID = require("uuid");
 var Producer = /** @class */ (function () {
     /**
      * Decalre a workflow producer
-     * @param id Producer's id. If not given, a UUID will be used instead.
+     * @param id Producer's id. If not given, an UUID will be created instead.
      */
     function Producer(id) {
         this._parents = [];

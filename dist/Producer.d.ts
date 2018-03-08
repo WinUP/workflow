@@ -29,7 +29,7 @@ export declare abstract class Producer {
     readonly isYoungest: boolean;
     /**
      * Decalre a workflow producer
-     * @param id Producer's id. If not given, a UUID will be used instead.
+     * @param id Producer's id. If not given, an UUID will be created instead.
      */
     constructor(id?: string);
     /**
