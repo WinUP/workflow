@@ -45,11 +45,16 @@ var Relation = /** @class */ (function () {
      * @param input Data using in this test
      */
     Relation.prototype.judge = function (input) {
-        if (typeof this._code === 'string') {
-            return eval("(function(input){" + this._code + "})(input)") ? true : false;
+        try {
+            if (typeof this._code === 'string') {
+                return eval("(function(input){" + this._code + "})(input)") ? true : false;
+            }
+            else {
+                return this._code(input) ? true : false;
+            }
         }
-        else {
-            return this._code(input) ? true : false;
+        catch (error) {
+            throw EvalError("Cannot run code under relation " + this._from.id + " -> " + this._to.id + ": " + error);
         }
     };
     return Relation;

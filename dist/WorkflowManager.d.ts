@@ -22,6 +22,9 @@ export declare class WorkflowManager {
      * @returns An array contains each producer's result. Regurally last one is the last producer's result.
      */
     run<T, U = T>(input: T): Promise<ProduceResult<U>[]>;
+    /**
+     * Validate current workflow to find any unreachable producer
+     */
     validate(): Producer[];
     private generateMap(entrance, searchDirection, touchable, allNode);
     private static skipProducer(target, skipped);

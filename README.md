@@ -52,32 +52,78 @@ For example, in this case, run sequence should be 1 -> 2-1 -> 3 -> 2-2 -> 4 auto
 All producers must extend Producer, which is an abstract class, they must have three function implementations:
 
 ```typescript
-public abstract initialize(...params: any[]): void;
-public abstract parameterStructure(): Parameter[] | null;
+public abstract initialize(params: ParameterDescriptor): void;
+public abstract introduce(): string;
+public abstract parameterStructure(): ParameterDescriptor | null;
 public abstract produce(input: any[]): any[] | Promise<any[]>;
 ```
 
-The initialize function should initialize the producer. The parameterStructure function should return a list of Parameter which defined initialize's parameter structure (still it has no use). The produce function should produce the data and return new data. For example, a producer that returns { key, value } pairs of any object can be like this:
+The initialize function should initialize the producer. The introduce function should return producer's description. The parameterStructure function should return a list of Parameter which defined initialize's parameter structure (still it has no use). The produce function should produce the data and return new data. For example, a producer that returns { key, value } pairs of any object can be like this:
 
 ```typescript
 export class KeyValuePairProducer extends Producer {
-    public initialize(...params: any[]): void { // No parameter
+    public initialize(params: ParameterDescriptor): void { // No parameter
     }
 
-    public parameterStructure(): Parameter[] | null { // Still has no use
-        return [] as Parameter[];
+    public introduce(): string {
+        return 'Read input object\'s key and value and return { key: key, value: value } array';
+    }
+
+    public parameterStructure(): ParameterDescriptor| null {
+        return {};
     }
 
     public produce(input: any[]): any[] | Promise<any[]> {
         const result: any[] = [];
         input.forEach(data => { // Map the data
             const keys = Object.keys(data).forEach(key => {
-                result.push({ key: key, value: data[key] }); // Find all keys in the object and change to { key, value } pair
+                result.push({ key: key, value: data[key] }); 
             });
         });
         return result;
     }
 }
+```
+
+### Pre-defined producers
+
+#### Data picker / Structured data picker
+
+Pick data from json object or array, see [JPQuery](https://www.npmjs.com/package/@ekifvk/jpquery)'s document for more information.
+
+```typescript
+const picker = new DataPickerProducer();
+picker.initialize({
+    query: '/times/success[-1 -> -2]'
+})
+
+const picker2 = new StructuredDataPickerProducer():
+picker2.initialize({
+    query: {
+        lastTime: '/times/success[-1]',
+        rawTime: '/times',
+        lastTwoTimes: [ '/times/success[-2]', '/times/success[-1]' ]
+    }
+});
+```
+
+#### Value converter
+
+Use given structure to focus on input data\'s specific places, then using rules to convert the value. See this producer's parameterStructure() for more information.
+
+```typescript
+const converter = new ValueConverterProducer();
+converter.initialize({
+    rules: [
+        default: true,
+        value: i => i * 2
+    ],
+    structure: {
+        data1: {
+            data2: [ { data3: true } ]
+        }
+    }
+});
 ```
 
 ### Static workflow definition
@@ -86,9 +132,9 @@ A JSON object can be created to define a workflow or part of workflow:
 
 ```json
 {
-    "producers": [],
-    "relations": [],
-    "entrance": "String. Optional. Entrance producer's ID."
+    "producers": [], // Optional in each file
+    "relations": [], // Optional in each file
+    "entrance": "" // Optional in each file, must has one in all files. Entrance producer's ID.
 }
 ```
 
@@ -98,7 +144,7 @@ Elements in producers should follow this structure:
 {
     "id": "String. ID of this producer",
     "type": "String. the type of this producer. Normally if producer class's name is <name>Producer, then <name> is the type of that producer.",
-    "parameters": ["Array<any>. Parameters of this producer initializer."],
+    "parameters": "ParameterDescriptor. This producer's parameters.",
     "description": "String. Optional. Description of this producer."
 }
 ```
@@ -109,7 +155,7 @@ Elements in relations should follow this structure:
 {
     "from": "String. Parent producer's ID.",
     "to": "String. Child producer's ID.",
-    "condition": "String or null. Condition of this relation (in JavaScript)."
+    "condition": "Null or function/function's content in string. It takes one param and should return true/false. Condition to judge the data that pass through this relation (in JavaScript)."
 }
 ```
 
