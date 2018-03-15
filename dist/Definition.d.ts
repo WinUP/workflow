@@ -1,3 +1,4 @@
+import { ParameterDescriptor } from './Parameter';
 /**
  * Workflow definition
  */
