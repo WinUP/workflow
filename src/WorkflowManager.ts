@@ -35,24 +35,28 @@ export class WorkflowManager {
                 }
                 entranceId = definition.entrance;
             }
-            definition.producers.forEach(producer => {
-                if (producers.some(p => p.id === producer.id)) {
-                    throw new TypeError(`Cannot add producer ${producer.id}: Id conflict`);
-                }
-                const instanceActivator = activator(producer.type);
-                if (!instanceActivator) {
-                    throw new ReferenceError(`Cannot declare producer ${producer.id}: Activator returns nothing`);
-                }
-                const instance = new instanceActivator(producer.id);
-                instance.initialize(...producer.parameters);
-                producers.push(instance);
-            });
-            definition.relations.forEach(relation => {
-                if (relations.some(r => r.from === relation.from && r.to === relation.to)) {
-                    throw new TypeError(`Cannot register relation: ${relation.from} -> ${relation.to} is already exist`);
-                }
-                relations.push(relation);
-            });
+            if (definition.producers) {
+                definition.producers.forEach(producer => {
+                    if (producers.some(p => p.id === producer.id)) {
+                        throw new TypeError(`Cannot add producer ${producer.id}: Id conflict`);
+                    }
+                    const instanceActivator = activator(producer.type);
+                    if (!instanceActivator) {
+                        throw new ReferenceError(`Cannot declare producer ${producer.id}: Activator returns nothing`);
+                    }
+                    const instance = new instanceActivator(producer.id);
+                    instance.initialize(producer.parameters);
+                    producers.push(instance);
+                });
+            }
+            if (definition.relations) {
+                definition.relations.forEach(relation => {
+                    if (relations.some(r => r.from === relation.from && r.to === relation.to)) {
+                        throw new TypeError(`Cannot register relation: ${relation.from} -> ${relation.to} is already exist`);
+                    }
+                    relations.push(relation);
+                });
+            }
         });
         const entrance = producers.find(p => p.id === entranceId);
         if (!entrance) {
@@ -67,7 +71,7 @@ export class WorkflowManager {
             const to = producers.find(p => p.id === relation.to);
             if (!to) {
                 throw new ReferenceError(
-                    `Cannot add relation ${relation.from} -> ${relation.to}: Child with id ${relation.from} is not exist`);
+                    `Cannot add relation ${relation.from} -> ${relation.to}: Child with id ${relation.to} is not exist`);
             }
             from!.relation(new Relation(from, to, relation.condition ? relation.condition : undefined));
         });
@@ -124,6 +128,37 @@ export class WorkflowManager {
             running = afterRunning;
         }
         return dataPool;
+    }
+
+    /**
+     * Validate current workflow to find any unreachable producer
+     */
+    public validate(): Producer[] {
+        if (this._entrance) {
+            const touchable: Producer[] = [this._entrance];
+            const allNode: Producer[] = [];
+            this.generateMap(this._entrance, 'down', touchable, allNode);
+            return allNode.filter(node => !touchable.includes(node));
+        } else {
+            return [];
+        }
+    }
+
+    private generateMap(entrance: Producer, searchDirection: 'up' | 'down' | 'both', touchable: Producer[], allNode: Producer[]): void {
+        if (!allNode.includes(entrance)) {
+            allNode.push(entrance);
+        }
+        if (searchDirection === 'down' || searchDirection === 'both') {
+            entrance.children.filter(child => !touchable.includes(child.to)).forEach(child => {
+                touchable.push(child.to);
+                this.generateMap(child.to, 'both', touchable, allNode);
+            });
+        }
+        if (searchDirection === 'up' || searchDirection === 'both') {
+            entrance.parents.forEach(parent => {
+                this.generateMap(parent.from, 'up', touchable, allNode);
+            });
+        }
     }
 
     private static skipProducer(target: Producer, skipped: Producer[]): void {

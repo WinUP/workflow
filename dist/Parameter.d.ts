@@ -1,19 +1,15 @@
 /**
- * Parameter descripton
+ * Parameter information
  */
 export interface Parameter {
     /**
-     * Type
+     * Type, see ParameterType for more information
      */
-    type: 'string' | 'object' | 'number' | 'boolean' | 'array' | 'null';
-    /**
-     * Name (in object)
-     */
-    name?: string;
+    type: number;
     /**
      * Subparameter (in array or object)
      */
-    subparams?: Parameter[];
+    children?: ParameterDescriptor;
     /**
      * Is optional
      */
@@ -26,4 +22,22 @@ export interface Parameter {
      * Description
      */
     description: string;
+}
+/**
+ * Parameter descriptor
+ */
+export interface ParameterDescriptor {
+    [key: string]: Parameter;
+}
+/**
+ * Parameter type
+ */
+export declare enum ParameterType {
+    String = 1,
+    Number = 2,
+    Boolean = 4,
+    Array = 8,
+    Object = 16,
+    Null = 32,
+    Any = 63,
 }

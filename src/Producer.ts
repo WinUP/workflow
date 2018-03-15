@@ -1,6 +1,6 @@
-import { Parameter } from './Parameter';
-import * as UUID from 'uuid';
+import { ParameterDescriptor } from './Parameter';
 import { Relation } from './Relation';
+import * as UUID from 'uuid';
 
 /**
  * Workflow producer
@@ -118,15 +118,20 @@ export abstract class Producer {
     }
 
     /**
-     * initialize producer
+     * Initialize producer
      * @param params Parameter list
      */
-    public abstract initialize(...params: any[]): void;
+    public abstract initialize(params: { [key: string]: any }): void;
+
+    /**
+     * Get producer's description
+     */
+    public abstract introduce(): string;
 
     /**
      * Get producer's parameter description
      */
-    public abstract parameterStructure(): Parameter[] | null;
+    public abstract parameterStructure(): ParameterDescriptor;
 
     /**
      * Run this producer

@@ -5,11 +5,11 @@ export interface WorkflowDefinition {
     /**
      * Producers
      */
-    producers: ProducerDefinition[];
+    producers?: ProducerDefinition[];
     /**
      * Relations
      */
-    relations: RelationDefinition[];
+    relations?: RelationDefinition[];
     /**
      * Entrance producer
      */
@@ -30,7 +30,9 @@ export interface ProducerDefinition {
     /**
      * Parameters for initializer
      */
-    parameters: any[];
+    parameters: {
+        [key: string]: any;
+    };
     /**
      * Description
      */
