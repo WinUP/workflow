@@ -76,24 +76,28 @@ var WorkflowManager = /** @class */ (function () {
                 }
                 entranceId = definition.entrance;
             }
-            definition.producers.forEach(function (producer) {
-                if (producers.some(function (p) { return p.id === producer.id; })) {
-                    throw new TypeError("Cannot add producer " + producer.id + ": Id conflict");
-                }
-                var instanceActivator = activator(producer.type);
-                if (!instanceActivator) {
-                    throw new ReferenceError("Cannot declare producer " + producer.id + ": Activator returns nothing");
-                }
-                var instance = new instanceActivator(producer.id);
-                instance.initialize.apply(instance, producer.parameters);
-                producers.push(instance);
-            });
-            definition.relations.forEach(function (relation) {
-                if (relations.some(function (r) { return r.from === relation.from && r.to === relation.to; })) {
-                    throw new TypeError("Cannot register relation: " + relation.from + " -> " + relation.to + " is already exist");
-                }
-                relations.push(relation);
-            });
+            if (definition.producers) {
+                definition.producers.forEach(function (producer) {
+                    if (producers.some(function (p) { return p.id === producer.id; })) {
+                        throw new TypeError("Cannot add producer " + producer.id + ": Id conflict");
+                    }
+                    var instanceActivator = activator(producer.type);
+                    if (!instanceActivator) {
+                        throw new ReferenceError("Cannot declare producer " + producer.id + ": Activator returns nothing");
+                    }
+                    var instance = new instanceActivator(producer.id);
+                    instance.initialize(producer.parameters);
+                    producers.push(instance);
+                });
+            }
+            if (definition.relations) {
+                definition.relations.forEach(function (relation) {
+                    if (relations.some(function (r) { return r.from === relation.from && r.to === relation.to; })) {
+                        throw new TypeError("Cannot register relation: " + relation.from + " -> " + relation.to + " is already exist");
+                    }
+                    relations.push(relation);
+                });
+            }
         });
         var entrance = producers.find(function (p) { return p.id === entranceId; });
         if (!entrance) {
@@ -106,7 +110,7 @@ var WorkflowManager = /** @class */ (function () {
             }
             var to = producers.find(function (p) { return p.id === relation.to; });
             if (!to) {
-                throw new ReferenceError("Cannot add relation " + relation.from + " -> " + relation.to + ": Child with id " + relation.from + " is not exist");
+                throw new ReferenceError("Cannot add relation " + relation.from + " -> " + relation.to + ": Child with id " + relation.to + " is not exist");
             }
             from.relation(new Relation_1.Relation(from, to, relation.condition ? relation.condition : undefined));
         });
@@ -215,6 +219,37 @@ var WorkflowManager = /** @class */ (function () {
                 }
             });
         });
+    };
+    /**
+     * Validate current workflow to find any unreachable producer
+     */
+    WorkflowManager.prototype.validate = function () {
+        if (this._entrance) {
+            var touchable_1 = [this._entrance];
+            var allNode = [];
+            this.generateMap(this._entrance, 'down', touchable_1, allNode);
+            return allNode.filter(function (node) { return !touchable_1.includes(node); });
+        }
+        else {
+            return [];
+        }
+    };
+    WorkflowManager.prototype.generateMap = function (entrance, searchDirection, touchable, allNode) {
+        var _this = this;
+        if (!allNode.includes(entrance)) {
+            allNode.push(entrance);
+        }
+        if (searchDirection === 'down' || searchDirection === 'both') {
+            entrance.children.filter(function (child) { return !touchable.includes(child.to); }).forEach(function (child) {
+                touchable.push(child.to);
+                _this.generateMap(child.to, 'both', touchable, allNode);
+            });
+        }
+        if (searchDirection === 'up' || searchDirection === 'both') {
+            entrance.parents.forEach(function (parent) {
+                _this.generateMap(parent.from, 'up', touchable, allNode);
+            });
+        }
     };
     WorkflowManager.skipProducer = function (target, skipped) {
         skipped.push(target);

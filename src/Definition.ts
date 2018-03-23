@@ -1,3 +1,5 @@
+import { ParameterDescriptor } from './Parameter';
+
 /**
  * Workflow definition
  */
@@ -5,11 +7,11 @@ export interface WorkflowDefinition {
     /**
      * Producers
      */
-    producers: ProducerDefinition[];
+    producers?: ProducerDefinition[];
     /**
      * Relations
      */
-    relations: RelationDefinition[];
+    relations?: RelationDefinition[];
     /**
      * Entrance producer
      */
@@ -31,7 +33,7 @@ export interface ProducerDefinition {
     /**
      * Parameters for initializer
      */
-    parameters: any[];
+    parameters: { [key: string]: any };
     /**
      * Description
      */
@@ -54,4 +56,29 @@ export interface RelationDefinition {
      * Condition
      */
     condition?: string | null;
+}
+
+export interface SpecialParameter<T = any> {
+    type: SpecialParameterType;
+    content: T;
+}
+
+export enum SpecialParameterType {
+    Eval = 'eval'
+}
+
+const parameterTypes = [SpecialParameterType.Eval];
+
+export function isSpecialParameter(input: any): input is SpecialParameter {
+    if (typeof input !== 'object') {
+        return false;
+    }
+    const keys = Object.keys(input);
+    if (!keys.includes('type') || !keys.includes('content')) {
+        return false;
+    }
+    if (!parameterTypes.includes(input.type)) {
+        return false;
+    }
+    return true;
 }

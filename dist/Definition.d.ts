@@ -5,11 +5,11 @@ export interface WorkflowDefinition {
     /**
      * Producers
      */
-    producers: ProducerDefinition[];
+    producers?: ProducerDefinition[];
     /**
      * Relations
      */
-    relations: RelationDefinition[];
+    relations?: RelationDefinition[];
     /**
      * Entrance producer
      */
@@ -30,7 +30,9 @@ export interface ProducerDefinition {
     /**
      * Parameters for initializer
      */
-    parameters: any[];
+    parameters: {
+        [key: string]: any;
+    };
     /**
      * Description
      */
@@ -53,3 +55,11 @@ export interface RelationDefinition {
      */
     condition?: string | null;
 }
+export interface SpecialParameter<T = any> {
+    type: SpecialParameterType;
+    content: T;
+}
+export declare enum SpecialParameterType {
+    Eval = "eval",
+}
+export declare function isSpecialParameter(input: any): input is SpecialParameter;

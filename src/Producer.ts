@@ -1,6 +1,7 @@
-import { Parameter } from './Parameter';
-import * as UUID from 'uuid';
+import { ParameterDescriptor } from './Parameter';
 import { Relation } from './Relation';
+import * as UUID from 'uuid';
+import { isSpecialParameter, SpecialParameterType } from '.';
 
 /**
  * Workflow producer
@@ -118,19 +119,50 @@ export abstract class Producer {
     }
 
     /**
-     * initialize producer
+     * Initialize producer
      * @param params Parameter list
      */
-    public abstract initialize(...params: any[]): void;
+    public initialize(params: { [key: string]: any }): void {
+        this._initialize(Producer.parseParams(params));
+    }
+
+    protected abstract _initialize(params: { [key: string]: any }): void;
+
+    /**
+     * Get producer's description
+     */
+    public abstract introduce(): string;
 
     /**
      * Get producer's parameter description
      */
-    public abstract parameterStructure(): Parameter[] | null;
+    public abstract parameterStructure(): ParameterDescriptor;
 
     /**
      * Run this producer
      * @param input Input data
      */
     public abstract produce(input: any[]): any[] | Promise<any[]>;
+
+    private static parseParams(params: { [key: string]: any }): { [key: string]: any } {
+        if (isSpecialParameter(params)) {
+            if (params.type === SpecialParameterType.Eval) {
+                params = eval(params.content);
+            }
+        }
+        if (!(typeof params === 'object')) {
+            return params;
+        }
+        const result: { [key: string]: any } = {};
+        Object.keys(params).forEach(key => {
+            if (params[key] instanceof Array) {
+                result[key] = params[key].map((v: any) => Producer.parseParams(v));
+            } else if (typeof params[key] === 'object') {
+                result[key] = Producer.parseParams(params[key]);
+            } else {
+                result[key] = params[key];
+            }
+        });
+        return result;
+    }
 }

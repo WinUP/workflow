@@ -1,4 +1,4 @@
-import { Parameter } from './Parameter';
+import { ParameterDescriptor } from './Parameter';
 import { Relation } from './Relation';
 /**
  * Workflow producer
@@ -29,7 +29,7 @@ export declare abstract class Producer {
     readonly isYoungest: boolean;
     /**
      * Decalre a workflow producer
-     * @param id Producer's id. If not given, a UUID will be used instead.
+     * @param id Producer's id. If not given, an UUID will be created instead.
      */
     constructor(id?: string);
     /**
@@ -59,17 +59,27 @@ export declare abstract class Producer {
      */
     isRunningConditionSatisfied(finishedProducers: Producer[], skippedProducers: Producer[]): boolean;
     /**
-     * initialize producer
+     * Initialize producer
      * @param params Parameter list
      */
-    abstract initialize(...params: any[]): void;
+    initialize(params: {
+        [key: string]: any;
+    }): void;
+    protected abstract _initialize(params: {
+        [key: string]: any;
+    }): void;
+    /**
+     * Get producer's description
+     */
+    abstract introduce(): string;
     /**
      * Get producer's parameter description
      */
-    abstract parameterStructure(): Parameter[] | null;
+    abstract parameterStructure(): ParameterDescriptor;
     /**
      * Run this producer
      * @param input Input data
      */
     abstract produce(input: any[]): any[] | Promise<any[]>;
+    private static parseParams(params);
 }

@@ -6,7 +6,7 @@ import { Producer } from './Producer';
 export class Relation {
     private _from: Producer;
     private _to: Producer;
-    private _code: string;
+    private _code: string | ((input: any) => boolean);
 
     /**
      * Get relation's parent producer
@@ -25,11 +25,11 @@ export class Relation {
     /**
      * Get relation's condition
      */
-    public get code(): string {
+    public get code(): string | ((input: any) => boolean) {
         return this._code;
     }
 
-    public constructor(from: Producer, to: Producer, code: string = 'return true;') {
+    public constructor(from: Producer, to: Producer, code: string | ((input: any) => boolean) = () => true) {
         this._from = from;
         this._to = to;
         this._code = code;
@@ -40,6 +40,14 @@ export class Relation {
      * @param input Data using in this test
      */
     public judge<T = any>(input: T): boolean {
-        return eval(`(function(input){${this._code}})(input)`) ? true : false;
+        try {
+            if (typeof this._code === 'string') {
+                return eval(`(function(input){${this._code}})(input)`) ? true : false;
+            } else {
+                return this._code(input) ? true : false;
+            }
+        } catch (error) {
+            throw EvalError(`Cannot run code under relation ${this._from.id} -> ${this._to.id}: ${error}`);
+        }
     }
 }

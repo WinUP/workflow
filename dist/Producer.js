@@ -1,13 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var UUID = require("uuid");
+var _1 = require(".");
 /**
  * Workflow producer
  */
 var Producer = /** @class */ (function () {
     /**
      * Decalre a workflow producer
-     * @param id Producer's id. If not given, a UUID will be used instead.
+     * @param id Producer's id. If not given, an UUID will be created instead.
      */
     function Producer(id) {
         this._parents = [];
@@ -128,6 +129,36 @@ var Producer = /** @class */ (function () {
             return false;
         }
         return true;
+    };
+    /**
+     * Initialize producer
+     * @param params Parameter list
+     */
+    Producer.prototype.initialize = function (params) {
+        this._initialize(Producer.parseParams(params));
+    };
+    Producer.parseParams = function (params) {
+        if (_1.isSpecialParameter(params)) {
+            if (params.type === _1.SpecialParameterType.Eval) {
+                params = eval(params.content);
+            }
+        }
+        if (!(typeof params === 'object')) {
+            return params;
+        }
+        var result = {};
+        Object.keys(params).forEach(function (key) {
+            if (params[key] instanceof Array) {
+                result[key] = params[key].map(function (v) { return Producer.parseParams(v); });
+            }
+            else if (typeof params[key] === 'object') {
+                result[key] = Producer.parseParams(params[key]);
+            }
+            else {
+                result[key] = params[key];
+            }
+        });
+        return result;
     };
     return Producer;
 }());
