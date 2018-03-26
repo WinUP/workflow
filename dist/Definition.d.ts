@@ -51,6 +51,10 @@ export interface RelationDefinition {
      */
     to: string;
     /**
+     * Inject parameter name
+     */
+    inject?: string;
+    /**
      * Condition
      */
     condition?: string | null;

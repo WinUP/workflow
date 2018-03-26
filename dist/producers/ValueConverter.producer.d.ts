@@ -21,14 +21,9 @@ export interface ValueConvertRule<T = any, U = any> {
  * 值转换处理器
  */
 export declare class ValueConverterProducer extends Producer {
-    private _rules;
-    private _structure;
-    protected _initialize(params: {
-        [key: string]: any;
-    }): void;
     introduce(): string;
     parameterStructure(): ParameterDescriptor;
-    produce(input: any[]): any[] | Promise<any[]>;
-    private convert(structure, source);
+    protected _produce(input: any[]): any[] | Promise<any[]>;
+    private static convert(structure, source, rules);
     private static pickValue(key, rules);
 }

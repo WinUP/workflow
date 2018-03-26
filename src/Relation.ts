@@ -6,6 +6,7 @@ import { Producer } from './Producer';
 export class Relation {
     private _from: Producer;
     private _to: Producer;
+    private _inject?: string;
     private _code: string | ((input: any) => boolean);
 
     /**
@@ -29,9 +30,19 @@ export class Relation {
         return this._code;
     }
 
-    public constructor(from: Producer, to: Producer, code: string | ((input: any) => boolean) = () => true) {
+    /**
+     * Get relation's inject parameter name
+     * @description Inject parameter means data transfered by this relation will be inject to producer as a
+     * temporaty "initialize" parameter only for this round of produce.
+     */
+    public get inject(): string | undefined {
+        return this._inject;
+    }
+
+    public constructor(from: Producer, to: Producer, inject?: string, code: string | ((input: any) => boolean) = () => true) {
         this._from = from;
         this._to = to;
+        this._inject = inject;
         this._code = code;
     }
 

@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+var Definition_1 = require("./Definition");
+var ParamaterTable_1 = require("./ParamaterTable");
 var UUID = require("uuid");
-var _1 = require(".");
 /**
  * Workflow producer
  */
@@ -11,10 +12,21 @@ var Producer = /** @class */ (function () {
      * @param id Producer's id. If not given, an UUID will be created instead.
      */
     function Producer(id) {
+        this._parameters = new ParamaterTable_1.ParameterTable();
         this._parents = [];
         this._children = [];
         this._id = id ? id : UUID.v4().toUpperCase();
     }
+    Object.defineProperty(Producer.prototype, "parameters", {
+        /**
+         * Get producer's parameter table
+         */
+        get: function () {
+            return this._parameters;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(Producer.prototype, "parents", {
         /**
          * Get producer's parents
@@ -121,7 +133,7 @@ var Producer = /** @class */ (function () {
      * @param finishedProducers Producers that already finished running
      * @param skippedProducers Producers that will not run anymore
      */
-    Producer.prototype.isRunningConditionSatisfied = function (finishedProducers, skippedProducers) {
+    Producer.prototype.fitCondition = function (finishedProducers, skippedProducers) {
         if (this.isRoot) {
             return true;
         }
@@ -135,11 +147,35 @@ var Producer = /** @class */ (function () {
      * @param params Parameter list
      */
     Producer.prototype.initialize = function (params) {
-        this._initialize(Producer.parseParams(params));
+        var result = Producer.parseParams(params);
+        result = this.checkParameters(result);
+        this.parameters.use(result);
+    };
+    /**
+     * Run this producer
+     * @param input Input data
+     */
+    Producer.prototype.produce = function (input, params) {
+        var _this = this;
+        var keys = Object.keys(params);
+        if (keys.length === 0) {
+            return this._produce(input);
+        }
+        else {
+            var cache_1 = {};
+            keys.forEach(function (key) { return cache_1[key] = _this.parameters.get(key); });
+            this.parameters.patch(this.checkParameters(params));
+            var output = this._produce(input);
+            this.parameters.patch(cache_1);
+            return output;
+        }
+    };
+    Producer.prototype.checkParameters = function (params) {
+        return params;
     };
     Producer.parseParams = function (params) {
-        if (_1.isSpecialParameter(params)) {
-            if (params.type === _1.SpecialParameterType.Eval) {
+        if (Definition_1.isSpecialParameter(params)) {
+            if (params.type === Definition_1.SpecialParameterType.Eval) {
                 params = eval(params.content);
             }
         }

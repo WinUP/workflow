@@ -36,6 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var Relation_1 = require("./Relation");
+var util_1 = require("./util");
 /**
  * Workflow manager
  */
@@ -112,7 +113,7 @@ var WorkflowManager = /** @class */ (function () {
             if (!to) {
                 throw new ReferenceError("Cannot add relation " + relation.from + " -> " + relation.to + ": Child with id " + relation.to + " is not exist");
             }
-            from.relation(new Relation_1.Relation(from, to, relation.condition ? relation.condition : undefined));
+            from.relation(new Relation_1.Relation(from, to, relation.inject, relation.condition || undefined));
         });
         var result = new WorkflowManager();
         result.entrance = entrance;
@@ -132,62 +133,61 @@ var WorkflowManager = /** @class */ (function () {
                         if (this._entrance == null) {
                             throw new ReferenceError('Cannot run workflow: No entrance point');
                         }
-                        running = [{ producer: this._entrance, data: [input] }];
+                        running = [{ producer: this._entrance, data: [input], inject: {} }];
                         finished = [];
                         skipped = [];
                         dataPool = [];
                         _loop_1 = function () {
-                            var afterRunning, _loop_2, i;
+                            var nextRound, _loop_2, i;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
-                                        afterRunning = [];
+                                        nextRound = [];
                                         _loop_2 = function (i) {
-                                            var runner, result, syncResult_1, _a, existedRunner;
-                                            return __generator(this, function (_b) {
-                                                switch (_b.label) {
+                                            var runner, result_1, existedRunner;
+                                            return __generator(this, function (_a) {
+                                                switch (_a.label) {
                                                     case 0:
                                                         runner = running[i];
-                                                        if (!(!afterRunning.some(function (r) { return r.producer === runner.producer; })
-                                                            && runner.producer.isRunningConditionSatisfied(finished, skipped))) return [3 /*break*/, 4];
-                                                        result = runner.producer.produce(runner.data);
-                                                        if (!(result instanceof Promise)) return [3 /*break*/, 2];
-                                                        return [4 /*yield*/, result];
+                                                        if (!(!nextRound.some(function (r) { return r.producer === runner.producer; }) && runner.producer.fitCondition(finished, skipped))) return [3 /*break*/, 2];
+                                                        return [4 /*yield*/, util_1.asPromise(runner.producer.produce(runner.data, runner.inject))];
                                                     case 1:
-                                                        _a = _b.sent();
-                                                        return [3 /*break*/, 3];
-                                                    case 2:
-                                                        _a = result;
-                                                        _b.label = 3;
-                                                    case 3:
-                                                        syncResult_1 = _a;
-                                                        finished.push(runner.producer);
-                                                        dataPool.push({ producer: runner.producer, data: syncResult_1 });
+                                                        result_1 = _a.sent();
+                                                        finished.push(runner.producer); // 标记执行完成
+                                                        dataPool.push({ producer: runner.producer, data: result_1 }); // 记录执行结果
+                                                        // 处理所有子节点
                                                         runner.producer.children.forEach(function (child) {
-                                                            var suitableResult = syncResult_1.filter(function (r) { return child.judge(r); });
+                                                            var suitableResult = result_1.filter(function (r) { return child.judge(r); });
                                                             if (suitableResult.length > 0) {
-                                                                var newRunner = afterRunning.find(function (r) { return r.producer === child.to; });
+                                                                // 从下一轮执行队列中寻找目标节点
+                                                                var newRunner = nextRound.find(function (r) { return r.producer === child.to; });
                                                                 if (!newRunner) {
-                                                                    newRunner = { producer: child.to, data: [] };
-                                                                    afterRunning.push(newRunner);
+                                                                    newRunner = { producer: child.to, data: [], inject: {} };
+                                                                    nextRound.push(newRunner);
                                                                 }
-                                                                newRunner.data = newRunner.data.concat(suitableResult);
+                                                                if (child.inject) {
+                                                                    newRunner.inject[child.inject] = suitableResult[0];
+                                                                }
+                                                                else {
+                                                                    newRunner.data = newRunner.data.concat(suitableResult);
+                                                                }
                                                             }
                                                             else {
+                                                                // 满足条件的数据不存在视为跳过目标节点
                                                                 WorkflowManager.skipProducer(child.to, skipped);
                                                             }
                                                         });
-                                                        return [3 /*break*/, 5];
-                                                    case 4:
-                                                        existedRunner = afterRunning.find(function (r) { return r.producer === runner.producer; });
+                                                        return [3 /*break*/, 3];
+                                                    case 2:
+                                                        existedRunner = nextRound.find(function (r) { return r.producer === runner.producer; });
                                                         if (existedRunner) {
                                                             existedRunner.data = existedRunner.data.concat(runner.data);
                                                         }
                                                         else {
-                                                            afterRunning.push(runner);
+                                                            nextRound.push(runner);
                                                         }
-                                                        _b.label = 5;
-                                                    case 5: return [2 /*return*/];
+                                                        _a.label = 3;
+                                                    case 3: return [2 /*return*/];
                                                 }
                                             });
                                         };
@@ -203,7 +203,7 @@ var WorkflowManager = /** @class */ (function () {
                                         i++;
                                         return [3 /*break*/, 1];
                                     case 4:
-                                        running = afterRunning;
+                                        running = nextRound;
                                         return [2 /*return*/];
                                 }
                             });

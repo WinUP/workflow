@@ -4,10 +4,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
  * Workflow relation
  */
 var Relation = /** @class */ (function () {
-    function Relation(from, to, code) {
+    function Relation(from, to, inject, code) {
         if (code === void 0) { code = function () { return true; }; }
         this._from = from;
         this._to = to;
+        this._inject = inject;
         this._code = code;
     }
     Object.defineProperty(Relation.prototype, "from", {
@@ -36,6 +37,18 @@ var Relation = /** @class */ (function () {
          */
         get: function () {
             return this._code;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Relation.prototype, "inject", {
+        /**
+         * Get relation's inject parameter name
+         * @description Inject parameter means data transfered by this relation will be inject to producer as a
+         * temporaty "initialize" parameter only for this round of produce.
+         */
+        get: function () {
+            return this._inject;
         },
         enumerable: true,
         configurable: true

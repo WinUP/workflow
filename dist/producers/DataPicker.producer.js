@@ -19,19 +19,20 @@ var JPQuery = require("@ekifvk/jpquery");
 var DataPickerProducer = /** @class */ (function (_super) {
     __extends(DataPickerProducer, _super);
     function DataPickerProducer() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this._query = [];
-        return _this;
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    DataPickerProducer.prototype._initialize = function (params) {
-        if (typeof params.query !== 'string') {
-            throw new TypeError("Cannot create data picker: Parameter 'query' must be string");
+    DataPickerProducer.prototype.checkParameters = function (params) {
+        if (params.query !== undefined) {
+            if (typeof params.query !== 'string') {
+                throw new TypeError("Data picker " + this.id + ": Parameter 'query' must be string");
+            }
+            params.query = JPQuery.analyse(params.query);
         }
-        this._query = JPQuery.analyse(params.query);
+        return params;
     };
     DataPickerProducer.prototype.introduce = function () {
-        return 'Pick data from json object or array using JPQuery, if query string not starts with /, it will be copy to output.\n' +
-            'Example: "/data1" -> data1';
+        return 'Pick data from json object or array using JPQuery. If query string not starts with /, it will be copy to output.\n' +
+            'Example: "/data1" -> (input.data1 or each element\'s data1 field if input is array)';
     };
     DataPickerProducer.prototype.parameterStructure = function () {
         return {
@@ -42,9 +43,12 @@ var DataPickerProducer = /** @class */ (function (_super) {
             }
         };
     };
-    DataPickerProducer.prototype.produce = function (input) {
-        var _this = this;
-        return input.map(function (data) { return JPQuery.pick(data, _this._query); });
+    DataPickerProducer.prototype._produce = function (input) {
+        var query = this.parameters.get('query');
+        if (!query) {
+            throw new TypeError("Data picker " + this.id + ": No query string");
+        }
+        return input.map(function (data) { return JPQuery.pick(data, query); });
     };
     return DataPickerProducer;
 }(Producer_1.Producer));

@@ -2,6 +2,7 @@ import { WorkflowDefinition, RelationDefinition } from './Definition';
 import { ProduceResult } from './ProduceResult';
 import { Producer } from './Producer';
 import { Relation } from './Relation';
+import { asPromise } from './util';
 
 /**
  * Workflow manager
@@ -73,7 +74,7 @@ export class WorkflowManager {
                 throw new ReferenceError(
                     `Cannot add relation ${relation.from} -> ${relation.to}: Child with id ${relation.to} is not exist`);
             }
-            from!.relation(new Relation(from, to, relation.condition ? relation.condition : undefined));
+            from!.relation(new Relation(from, to, relation.inject, relation.condition || undefined));
         });
         const result = new WorkflowManager();
         result.entrance = entrance;
@@ -89,43 +90,51 @@ export class WorkflowManager {
         if (this._entrance == null) {
             throw new ReferenceError('Cannot run workflow: No entrance point');
         }
-        let running: ProduceResult<any[]>[] = [{producer: this._entrance, data: [input]}];
-        const finished: Producer[] = [];
-        const skipped: Producer[] = [];
-        const dataPool: ProduceResult<any>[] = [];
+        let running: (ProduceResult<any[]> & { inject: { [key: string]: any } })[]
+            = [{producer: this._entrance, data: [input], inject: {} }]; // 需要被执行的处理器
+        const finished: Producer[] = []; // 已执行完成的处理器
+        const skipped: Producer[] = []; // 需要被跳过的处理器
+        const dataPool: ProduceResult<any>[] = []; // 每个处理器的结果
         while (running.length > 0) {
-            const afterRunning: ProduceResult<any>[] = [];
+            const nextRound: (ProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
             for (let i = 0; i < running.length; i++) {
                 const runner = running[i];
-                if (!afterRunning.some(r => r.producer === runner.producer)
-                    && runner.producer.isRunningConditionSatisfied(finished, skipped)) {
-                    const result = runner.producer.produce(runner.data);
-                    const syncResult = result instanceof Promise ? await result : result;
-                    finished.push(runner.producer);
-                    dataPool.push({ producer: runner.producer, data: syncResult });
+                // 仅执行：目标节点不在下一轮执行队列中，目标节点满足执行前提
+                if (!nextRound.some(r => r.producer === runner.producer) && runner.producer.fitCondition(finished, skipped)) {
+                    const result = await asPromise<any[]>(runner.producer.produce(runner.data, runner.inject));
+                    finished.push(runner.producer); // 标记执行完成
+                    dataPool.push({ producer: runner.producer, data: result }); // 记录执行结果
+                    // 处理所有子节点
                     runner.producer.children.forEach(child => {
-                        const suitableResult = syncResult.filter(r => child.judge(r));
+                        const suitableResult = result.filter(r => child.judge(r));
                         if (suitableResult.length > 0) {
-                            let newRunner = afterRunning.find(r => r.producer === child.to);
-                            if (!newRunner) {
-                                newRunner = { producer: child.to, data: [] };
-                                afterRunning.push(newRunner);
+                            // 从下一轮执行队列中寻找目标节点
+                            let newRunner = nextRound.find(r => r.producer === child.to);
+                            if (!newRunner) { // 没有则新建执行要求
+                                newRunner = { producer: child.to, data: [], inject: {} };
+                                nextRound.push(newRunner);
                             }
-                            newRunner.data = [...newRunner.data, ...suitableResult];
+                            if (child.inject) { // 参数注入情况
+                                newRunner.inject[child.inject] = suitableResult[0];
+                            } else { // 普通数据传递
+                                newRunner.data = [...newRunner.data, ...suitableResult];
+                            }
                         } else {
+                            // 满足条件的数据不存在视为跳过目标节点
                             WorkflowManager.skipProducer(child.to, skipped);
                         }
                     });
                 } else {
-                    const existedRunner = afterRunning.find(r => r.producer === runner.producer);
+                    // 不执行则只做执行队列去重（数据合并），上述需要执行的情况在处理子节点时自带去重
+                    const existedRunner = nextRound.find(r => r.producer === runner.producer);
                     if (existedRunner) {
                         existedRunner.data = [...existedRunner.data, ...runner.data];
                     } else {
-                        afterRunning.push(runner);
+                        nextRound.push(runner);
                     }
                 }
             }
-            running = afterRunning;
+            running = nextRound;
         }
         return dataPool;
     }

@@ -1,12 +1,22 @@
+import { isSpecialParameter, SpecialParameterType } from './Definition';
 import { ParameterDescriptor } from './Parameter';
+import { ParameterTable } from './ParamaterTable';
+import { asPromise } from './util';
 import { Relation } from './Relation';
 import * as UUID from 'uuid';
-import { isSpecialParameter, SpecialParameterType } from '.';
 
 /**
  * Workflow producer
  */
 export abstract class Producer {
+    /**
+     * Get producer's parameter table
+     */
+    protected get parameters(): ParameterTable {
+        return this._parameters;
+    }
+    private _parameters: ParameterTable = new ParameterTable();
+
     /**
      * Get producer's parents
      */
@@ -108,7 +118,7 @@ export abstract class Producer {
      * @param finishedProducers Producers that already finished running
      * @param skippedProducers Producers that will not run anymore
      */
-    public isRunningConditionSatisfied(finishedProducers: Producer[], skippedProducers: Producer[]): boolean {
+    public fitCondition(finishedProducers: Producer[], skippedProducers: Producer[]): boolean {
         if (this.isRoot) {
             return true;
         }
@@ -123,10 +133,32 @@ export abstract class Producer {
      * @param params Parameter list
      */
     public initialize(params: { [key: string]: any }): void {
-        this._initialize(Producer.parseParams(params));
+        let result = Producer.parseParams(params);
+        result = this.checkParameters(result);
+        this.parameters.use(result);
     }
 
-    protected abstract _initialize(params: { [key: string]: any }): void;
+    /**
+     * Run this producer
+     * @param input Input data
+     */
+    public produce(input: any[], params: { [key: string]: any }): any[] | Promise<any[]> {
+        const keys = Object.keys(params);
+        if (keys.length === 0) {
+            return this._produce(input);
+        } else {
+            const cache: { [key: string]: any } = {};
+            keys.forEach(key => cache[key] = this.parameters.get(key));
+            this.parameters.patch(this.checkParameters(params));
+            const output = this._produce(input);
+            this.parameters.patch(cache);
+            return output;
+        }
+    }
+
+    protected checkParameters(params: { [key: string]: any }): { [key: string]: any } {
+        return params;
+    }
 
     /**
      * Get producer's description
@@ -138,11 +170,7 @@ export abstract class Producer {
      */
     public abstract parameterStructure(): ParameterDescriptor;
 
-    /**
-     * Run this producer
-     * @param input Input data
-     */
-    public abstract produce(input: any[]): any[] | Promise<any[]>;
+    protected abstract _produce(input: any[]): any[] | Promise<any[]>;
 
     private static parseParams(params: { [key: string]: any }): { [key: string]: any } {
         if (isSpecialParameter(params)) {

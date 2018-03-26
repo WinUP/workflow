@@ -1,9 +1,15 @@
 import { ParameterDescriptor } from './Parameter';
+import { ParameterTable } from './ParamaterTable';
 import { Relation } from './Relation';
 /**
  * Workflow producer
  */
 export declare abstract class Producer {
+    /**
+     * Get producer's parameter table
+     */
+    protected readonly parameters: ParameterTable;
+    private _parameters;
     /**
      * Get producer's parents
      */
@@ -57,7 +63,7 @@ export declare abstract class Producer {
      * @param finishedProducers Producers that already finished running
      * @param skippedProducers Producers that will not run anymore
      */
-    isRunningConditionSatisfied(finishedProducers: Producer[], skippedProducers: Producer[]): boolean;
+    fitCondition(finishedProducers: Producer[], skippedProducers: Producer[]): boolean;
     /**
      * Initialize producer
      * @param params Parameter list
@@ -65,9 +71,18 @@ export declare abstract class Producer {
     initialize(params: {
         [key: string]: any;
     }): void;
-    protected abstract _initialize(params: {
+    /**
+     * Run this producer
+     * @param input Input data
+     */
+    produce(input: any[], params: {
         [key: string]: any;
-    }): void;
+    }): any[] | Promise<any[]>;
+    protected checkParameters(params: {
+        [key: string]: any;
+    }): {
+        [key: string]: any;
+    };
     /**
      * Get producer's description
      */
@@ -76,10 +91,6 @@ export declare abstract class Producer {
      * Get producer's parameter description
      */
     abstract parameterStructure(): ParameterDescriptor;
-    /**
-     * Run this producer
-     * @param input Input data
-     */
-    abstract produce(input: any[]): any[] | Promise<any[]>;
+    protected abstract _produce(input: any[]): any[] | Promise<any[]>;
     private static parseParams(params);
 }

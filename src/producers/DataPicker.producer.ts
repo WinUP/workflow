@@ -6,18 +6,20 @@ import * as JPQuery from '@ekifvk/jpquery';
  * Data picker producer
  */
 export class DataPickerProducer extends Producer {
-    private _query: JPQuery.AnalyzerUnit[] = [];
 
-    protected _initialize(params: { [key: string]: any }): void {
-        if (typeof params.query !== 'string') {
-            throw new TypeError(`Cannot create data picker: Parameter 'query' must be string`);
+    protected checkParameters(params: { [key: string]: any }): { [key: string]: any } {
+        if (params.query !== undefined) {
+            if (typeof params.query !== 'string') {
+                throw new TypeError(`Data picker ${this.id}: Parameter 'query' must be string`);
+            }
+            params.query = JPQuery.analyse(params.query);
         }
-        this._query = JPQuery.analyse(params.query);
+        return params;
     }
 
     public introduce(): string {
-        return 'Pick data from json object or array using JPQuery, if query string not starts with /, it will be copy to output.\n' +
-            'Example: "/data1" -> data1';
+        return 'Pick data from json object or array using JPQuery. If query string not starts with /, it will be copy to output.\n' +
+            'Example: "/data1" -> (input.data1 or each element\'s data1 field if input is array)';
     }
 
     public parameterStructure(): ParameterDescriptor {
@@ -30,7 +32,11 @@ export class DataPickerProducer extends Producer {
         };
     }
 
-    public produce(input: any[]): any[] | Promise<any[]> {
-        return input.map(data => JPQuery.pick(data, this._query));
+    protected _produce(input: any[]): any[] | Promise<any[]> {
+        const query = this.parameters.get<JPQuery.AnalyzerUnit[]>('query');
+        if (!query) {
+            throw new TypeError(`Data picker ${this.id}: No query string`);
+        }
+        return input.map(data => JPQuery.pick(data, query));
     }
 }

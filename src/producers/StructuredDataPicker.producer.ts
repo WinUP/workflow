@@ -6,15 +6,6 @@ import * as JPQuery from '@ekifvk/jpquery';
  * Structured data picker producer
  */
 export class StructuredDataPickerProducer extends Producer {
-    private _query: { [key: string]: any } = {};
-
-    protected _initialize(params: { [key: string]: any }): void {
-        if (typeof params.query !== 'string') {
-            throw new TypeError(`Cannot create structured data picker: Parameter 'query' must be string`);
-        }
-        this._query = JPQuery.analyse(params.query);
-    }
-
     public introduce(): string {
         return 'Pick data from json object or array using JPQuery using given structure. ' +
             'if any query string not starts with /, it will be copy to output\'s same place. ' +
@@ -33,8 +24,12 @@ export class StructuredDataPickerProducer extends Producer {
         };
     }
 
-    public produce(input: any[]): any[] | Promise<any[]> {
-        return input.map(data => StructuredDataPickerProducer.pickData(this._query, data));
+    protected _produce(input: any[]): any[] | Promise<any[]> {
+        const query = this.parameters.get<JPQuery.AnalyzerUnit[]>('query');
+        if (!query) {
+            throw new TypeError(`Data picker ${this.id}: No query structure`);
+        }
+        return input.map(data => StructuredDataPickerProducer.pickData(query, data));
     }
 
     private static pickData(input: any, source: any): any {

@@ -49,22 +49,29 @@ For example, in this case, run sequence should be 1 -> 2-1 -> 3 -> 2-2 -> 4 auto
 
 ### How to write producer
 
-All producers must extend Producer, which is an abstract class, they must have three function implementations:
+All producers must extend Producer, which is an abstract class, they can have these function implementations:
 
 ```typescript
-public abstract initialize(params: ParameterDescriptor): void;
 public abstract introduce(): string;
-public abstract parameterStructure(): ParameterDescriptor | null;
-public abstract produce(input: any[]): any[] | Promise<any[]>;
+public abstract parameterStructure(): ParameterDescriptor;
+protected checkParameters(params: { [key: string]: any }): { [key: string]: any };
+protected abstract _produce(input: any[]): any[] | Promise<any[]>;
 ```
 
-The initialize function should initialize the producer. The introduce function should return producer's description. The parameterStructure function should return a list of Parameter which defined initialize's parameter structure (still it has no use). The produce function should produce the data and return new data. For example, a producer that returns { key, value } pairs of any object can be like this:
+The checkParameters function should check the parameter's type and change them if needed. The introduce function should return producer's description. The parameterStructure function should return a list of Parameter which defined initialize's parameter structure (still it has no use). The _produce function should produce the data and return new data.
+
+One more thing, producers can access their parameter by using ```this.parameters```. Of course they can handle parameters by their own, but using ```this.parameters``` will have an automatic cache & replace if ```inject``` by relation(s) is active when running.
+
+```typescript
+return input + this.prameters.get<number>('number1');
+```
+
+Parameters stores to ```this.parameter``` automatically and changed automatically based on relations.
+
+For example, a producer that returns { key, value } pairs of any object can be like this:
 
 ```typescript
 export class KeyValuePairProducer extends Producer {
-    public initialize(params: ParameterDescriptor): void { // No parameter
-    }
-
     public introduce(): string {
         return 'Read input object\'s key and value and return { key: key, value: value } array';
     }
@@ -73,7 +80,7 @@ export class KeyValuePairProducer extends Producer {
         return {};
     }
 
-    public produce(input: any[]): any[] | Promise<any[]> {
+    protected _produce(input: any[]): any[] | Promise<any[]> {
         const result: any[] = [];
         input.forEach(data => { // Map the data
             const keys = Object.keys(data).forEach(key => {
@@ -155,6 +162,7 @@ Elements in relations should follow this structure:
 {
     "from": "String. Parent producer's ID.",
     "to": "String. Child producer's ID.",
+    "inject": "Inject parameter name.  Inject parameter means data transfered by this relation will be inject to producer as a temporaty \"initialize\" parameter only for this round of produce.",
     "condition": "Null or function/function's content in string. It takes one param and should return true/false. Condition to judge the data that pass through this relation (in JavaScript)."
 }
 ```

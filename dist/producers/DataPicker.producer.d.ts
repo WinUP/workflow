@@ -4,11 +4,12 @@ import { Producer } from '../Producer';
  * Data picker producer
  */
 export declare class DataPickerProducer extends Producer {
-    private _query;
-    protected _initialize(params: {
+    protected checkParameters(params: {
         [key: string]: any;
-    }): void;
+    }): {
+        [key: string]: any;
+    };
     introduce(): string;
     parameterStructure(): ParameterDescriptor;
-    produce(input: any[]): any[] | Promise<any[]>;
+    protected _produce(input: any[]): any[] | Promise<any[]>;
 }

@@ -19,21 +19,8 @@ var lodash_1 = require("lodash");
 var ValueConverterProducer = /** @class */ (function (_super) {
     __extends(ValueConverterProducer, _super);
     function ValueConverterProducer() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this._rules = [];
-        _this._structure = {};
-        return _this;
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    ValueConverterProducer.prototype._initialize = function (params) {
-        if (!(params.rules instanceof Array)) {
-            throw new TypeError("Cannot create value converter: Parameter 'rules' must be Array");
-        }
-        this._rules = params.rules;
-        if (params.structure == null) {
-            throw new TypeError("Cannot create value converter: Parameter 'structure' cannot be null");
-        }
-        this._structure = params.structure;
-    };
     ValueConverterProducer.prototype.introduce = function () {
         return 'Use given structure to focus on input data\'s specific places, then using rules to convert the value.';
     };
@@ -76,28 +63,31 @@ var ValueConverterProducer = /** @class */ (function (_super) {
             }
         };
     };
-    ValueConverterProducer.prototype.produce = function (input) {
-        var _this = this;
+    ValueConverterProducer.prototype._produce = function (input) {
+        var rules = this.parameters.get('rules');
+        var structure = this.parameters.get('structure');
+        if (!rules || !structure) {
+            throw new TypeError("Value converter " + this.id + ": No rules or structure definition");
+        }
         return input.map(function (data) {
             if (data == null) {
                 return null;
             }
             if (typeof data === 'object') {
-                return _this.convert(_this._structure, data);
+                return ValueConverterProducer.convert(structure, data, rules);
             }
             else {
-                return ValueConverterProducer.pickValue(data, _this._rules);
+                return ValueConverterProducer.pickValue(data, rules);
             }
         });
     };
-    ValueConverterProducer.prototype.convert = function (structure, source) {
-        var _this = this;
+    ValueConverterProducer.convert = function (structure, source, rules) {
         // 空值转换
         if (source === null) {
-            return ValueConverterProducer.pickValue(source, this._rules);
+            return ValueConverterProducer.pickValue(source, rules);
         }
         if (source === undefined) {
-            return ValueConverterProducer.pickValue(source, this._rules);
+            return ValueConverterProducer.pickValue(source, rules);
         }
         // 结构定义为false
         if (structure === false) {
@@ -105,7 +95,7 @@ var ValueConverterProducer = /** @class */ (function (_super) {
         }
         // 输入值不为对象（此时忽略结构定义），或结构定义为true
         if (typeof source !== 'object' || structure === true) {
-            return ValueConverterProducer.pickValue(source, this._rules);
+            return ValueConverterProducer.pickValue(source, rules);
         }
         var result = {};
         // 输入值为数组且结构定义为数组
@@ -118,15 +108,15 @@ var ValueConverterProducer = /** @class */ (function (_super) {
                 var objectStructure_1 = structure.find(function (v) { return typeof v === 'object' && v; });
                 var hasTrue_1 = structure.some(function (v) { return v === true; });
                 if (!objectStructure_1 && hasTrue_1) {
-                    result = source.map(function (v) { return ValueConverterProducer.pickValue(v, _this._rules); });
+                    result = source.map(function (v) { return ValueConverterProducer.pickValue(v, rules); });
                 }
                 else if (objectStructure_1) {
                     result = source.map(function (v) {
                         if (typeof v === 'object' && v) {
-                            return _this.convert(objectStructure_1, v);
+                            return ValueConverterProducer.convert(objectStructure_1, v, rules);
                         }
                         else {
-                            return hasTrue_1 ? ValueConverterProducer.pickValue(v, _this._rules) : v;
+                            return hasTrue_1 ? ValueConverterProducer.pickValue(v, rules) : v;
                         }
                     });
                 }
@@ -140,13 +130,13 @@ var ValueConverterProducer = /** @class */ (function (_super) {
             if (Object.keys(structure).length === 0) {
                 Object.keys(source).forEach(function (key) {
                     if (!source[key]) {
-                        result[key] = ValueConverterProducer.pickValue(source[key], _this._rules);
+                        result[key] = ValueConverterProducer.pickValue(source[key], rules);
                     }
                     else if (typeof source[key] === 'object') {
                         result[key] = source[key];
                     }
                     else {
-                        result[key] = ValueConverterProducer.pickValue(source[key], _this._rules);
+                        result[key] = ValueConverterProducer.pickValue(source[key], rules);
                     }
                 });
             }
@@ -165,13 +155,13 @@ var ValueConverterProducer = /** @class */ (function (_super) {
                             result[key] = undefined;
                         }
                         else if (source[key] instanceof Array) {
-                            result[key] = _this.convert(structure[key], source[key]);
+                            result[key] = ValueConverterProducer.convert(structure[key], source[key], rules);
                         }
                         else if (typeof source[key] === 'object') {
-                            result[key] = _this.convert(structure[key], source[key]);
+                            result[key] = ValueConverterProducer.convert(structure[key], source[key], rules);
                         }
                         else {
-                            result[key] = ValueConverterProducer.pickValue(source[key], _this._rules);
+                            result[key] = ValueConverterProducer.pickValue(source[key], rules);
                         }
                     }
                     else {
@@ -179,7 +169,7 @@ var ValueConverterProducer = /** @class */ (function (_super) {
                     }
                 });
                 availableKeys_1.filter(function (key) { return !originalKeys_1.includes(key); }).forEach(function (key) {
-                    result[key] = ValueConverterProducer.pickValue(undefined, _this._rules);
+                    result[key] = ValueConverterProducer.pickValue(undefined, rules);
                 });
             }
         }

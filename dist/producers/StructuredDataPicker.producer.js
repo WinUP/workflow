@@ -19,16 +19,8 @@ var JPQuery = require("@ekifvk/jpquery");
 var StructuredDataPickerProducer = /** @class */ (function (_super) {
     __extends(StructuredDataPickerProducer, _super);
     function StructuredDataPickerProducer() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this._query = {};
-        return _this;
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    StructuredDataPickerProducer.prototype._initialize = function (params) {
-        if (typeof params.query !== 'string') {
-            throw new TypeError("Cannot create structured data picker: Parameter 'query' must be string");
-        }
-        this._query = JPQuery.analyse(params.query);
-    };
     StructuredDataPickerProducer.prototype.introduce = function () {
         return 'Pick data from json object or array using JPQuery using given structure. ' +
             'if any query string not starts with /, it will be copy to output\'s same place. ' +
@@ -45,9 +37,12 @@ var StructuredDataPickerProducer = /** @class */ (function (_super) {
             }
         };
     };
-    StructuredDataPickerProducer.prototype.produce = function (input) {
-        var _this = this;
-        return input.map(function (data) { return StructuredDataPickerProducer.pickData(_this._query, data); });
+    StructuredDataPickerProducer.prototype._produce = function (input) {
+        var query = this.parameters.get('query');
+        if (!query) {
+            throw new TypeError("Data picker " + this.id + ": No query structure");
+        }
+        return input.map(function (data) { return StructuredDataPickerProducer.pickData(query, data); });
     };
     StructuredDataPickerProducer.pickData = function (input, source) {
         var _this = this;
