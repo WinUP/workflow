@@ -101,7 +101,9 @@ export class WorkflowManager {
                 const runner = running[i];
                 // 仅执行：目标节点不在下一轮执行队列中，目标节点满足执行前提
                 if (!nextRound.some(r => r.producer === runner.producer) && runner.producer.fitCondition(finished, skipped)) {
-                    const result = await asPromise<any[]>(runner.producer.produce(runner.data, runner.inject));
+                    let error: Error | null = null;
+                    const result: any[] = await asPromise<any[]>(runner.producer.produce(runner.data, runner.inject)).catch(e => error = e);
+                    if (error) { throw error; }
                     finished.push(runner.producer); // 标记执行完成
                     dataPool.push({ producer: runner.producer, data: result }); // 记录执行结果
                     // 处理所有子节点

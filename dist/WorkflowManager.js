@@ -144,15 +144,19 @@ var WorkflowManager = /** @class */ (function () {
                                     case 0:
                                         nextRound = [];
                                         _loop_2 = function (i) {
-                                            var runner, result_1, existedRunner;
+                                            var runner, error_1, result_1, existedRunner;
                                             return __generator(this, function (_a) {
                                                 switch (_a.label) {
                                                     case 0:
                                                         runner = running[i];
                                                         if (!(!nextRound.some(function (r) { return r.producer === runner.producer; }) && runner.producer.fitCondition(finished, skipped))) return [3 /*break*/, 2];
-                                                        return [4 /*yield*/, util_1.asPromise(runner.producer.produce(runner.data, runner.inject))];
+                                                        error_1 = null;
+                                                        return [4 /*yield*/, util_1.asPromise(runner.producer.produce(runner.data, runner.inject)).catch(function (e) { return error_1 = e; })];
                                                     case 1:
                                                         result_1 = _a.sent();
+                                                        if (error_1) {
+                                                            throw error_1;
+                                                        }
                                                         finished.push(runner.producer); // 标记执行完成
                                                         dataPool.push({ producer: runner.producer, data: result_1 }); // 记录执行结果
                                                         // 处理所有子节点

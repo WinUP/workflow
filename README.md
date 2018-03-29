@@ -94,6 +94,10 @@ export class KeyValuePairProducer extends Producer {
 
 ### Pre-defined producers
 
+#### Empty producer
+
+Producer that does nothing.
+
 #### Data picker / Structured data picker
 
 Pick data from json object or array, see [JPQuery](https://www.npmjs.com/package/@ekifvk/jpquery)'s document for more information.
