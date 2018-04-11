@@ -74,7 +74,7 @@ export class ValueConverterProducer extends Producer {
         if (!rules || !structure) {
             throw new TypeError(`Value converter ${this.id}: No rules or structure definition`);
         }
-        return input.map(data => {
+        return Promise.all(input.map(data => {
             if (data == null) {
                 return null;
             } if (typeof data === 'object') {
@@ -82,10 +82,10 @@ export class ValueConverterProducer extends Producer {
             } else {
                 return ValueConverterProducer.pickValue(data, rules);
             }
-        });
+        }));
     }
 
-    private static convert(structure: any, source: any, rules: ValueConvertRule[]): object | null | undefined {
+    private static async convert(structure: any, source: any, rules: ValueConvertRule[]): Promise<object | null | undefined> {
         // 空值转换
         if (source === null) {
             return ValueConverterProducer.pickValue(source, rules);
@@ -111,15 +111,15 @@ export class ValueConverterProducer extends Producer {
                 const objectStructure = structure.find(v => typeof v === 'object' && v);
                 const hasTrue = structure.some(v => v === true);
                 if (!objectStructure && hasTrue) { // 无结构定义，存在true
-                    result = source.map(v => ValueConverterProducer.pickValue(v, rules));
+                    result = await source.map(v => ValueConverterProducer.pickValue(v, rules));
                 } else if (objectStructure) { // 有结构定义
-                    result = source.map(v => {
+                    result = await Promise.all(source.map(async v => {
                         if (typeof v === 'object' && v) { // 对象转换
-                            return ValueConverterProducer.convert(objectStructure, v, rules);
+                            return await ValueConverterProducer.convert(objectStructure, v, rules);
                         } else { // 其他转换
-                            return hasTrue ? ValueConverterProducer.pickValue(v, rules) : v;
+                            return hasTrue ? await ValueConverterProducer.pickValue(v, rules) : v;
                         }
-                    });
+                    }));
                 } else { // 其他情况，视为不转换
                     result = source;
                 }
@@ -127,41 +127,45 @@ export class ValueConverterProducer extends Producer {
         } else if (typeof structure === 'object') { // 结构定义为对象
             // 结构定义为空对象
             if (Object.keys(structure).length === 0) {
-                Object.keys(source).forEach(key => {
+                const keys = Object.keys(source);
+                for (let i = 0; i < keys.length; i++) {
+                    const key = keys[i];
                     if (!source[key]) { // 空值转换
-                        result[key] = ValueConverterProducer.pickValue(source[key], rules);
+                        result[key] = await ValueConverterProducer.pickValue(source[key], rules);
                     } else if (typeof source[key] === 'object') { // 空对象会跳过非字面量转换
                         result[key] = source[key];
                     } else {
-                        result[key] = ValueConverterProducer.pickValue(source[key], rules);
+                        result[key] = await ValueConverterProducer.pickValue(source[key], rules);
                     }
-                });
+                }
             } else { // 结构定义为普通对象
                 const keys = Object.keys(structure);
-                const availableKeys = keys.some(v => structure[v] === false) // 根据是否包含false确定转换键
+                let availableKeys = keys.some(v => structure[v] === false) // 根据是否包含false确定转换键
                     ? keys.filter(key => structure[key] !== false)
                     : keys.filter(key => structure[key]);
                 const originalKeys = Object.keys(source);
-                originalKeys.forEach(key => {
+                for (let i = 0; i < originalKeys.length; i++) {
+                    const key = originalKeys[i];
                     if (availableKeys.includes(key)) {
                         if (source[key] === null) { // 空值转换
-                            result[key] = null;
+                            result[key] = ValueConverterProducer.pickValue(null, rules);
                         } else if (source[key] === undefined) { // 空值转换
-                            result[key] = undefined;
+                            result[key] = ValueConverterProducer.pickValue(undefined, rules);
                         } else if (source[key] instanceof Array) { // 数组转换
-                            result[key] = ValueConverterProducer.convert(structure[key], source[key], rules);
+                            result[key] = await ValueConverterProducer.convert(structure[key], source[key], rules);
                         } else if (typeof source[key] === 'object') { // 递归转换对象，已确保true/false的转换
-                            result[key] = ValueConverterProducer.convert(structure[key], source[key], rules);
+                            result[key] = await ValueConverterProducer.convert(structure[key], source[key], rules);
                         } else { // 字面量转换
-                            result[key] = ValueConverterProducer.pickValue(source[key], rules);
+                            result[key] = await ValueConverterProducer.pickValue(source[key], rules);
                         }
                     } else {
                         result[key] = source[key];
                     }
-                });
-                availableKeys.filter(key => !originalKeys.includes(key)).forEach(key => {
-                    result[key] = ValueConverterProducer.pickValue(undefined, rules);
-                });
+                }
+                availableKeys = availableKeys.filter(key => !originalKeys.includes(key));
+                for (let i = 0; i < availableKeys.length; i++) {
+                    result[availableKeys[i]] = await ValueConverterProducer.pickValue(undefined, rules);
+                }
             }
         } else { // 其他情况，因无定义视为不转换
             result = source;
@@ -169,7 +173,7 @@ export class ValueConverterProducer extends Producer {
         return result;
     }
 
-    private static pickValue(key: any, rules: ValueConvertRule[]): any {
+    private static async pickValue(key: any, rules: ValueConvertRule[]): Promise<any> {
         let pair = rules.find(r => typeof r.key === 'function' ? (r.key(key, this) ? true : false) : isEqual(r.key, key));
         if (!pair) {
             pair = rules.find(r => r.default === true);

@@ -165,14 +165,14 @@ var WorkflowManager = /** @class */ (function () {
                                                             if (suitableResult.length > 0) {
                                                                 // 从下一轮执行队列中寻找目标节点
                                                                 var newRunner = nextRound.find(function (r) { return r.producer === child.to; });
-                                                                if (!newRunner) {
+                                                                if (!newRunner) { // 没有则新建执行要求
                                                                     newRunner = { producer: child.to, data: [], inject: {} };
                                                                     nextRound.push(newRunner);
                                                                 }
-                                                                if (child.inject) {
+                                                                if (child.inject) { // 参数注入情况
                                                                     newRunner.inject[child.inject] = suitableResult[0];
                                                                 }
-                                                                else {
+                                                                else { // 普通数据传递
                                                                     newRunner.data = newRunner.data.concat(suitableResult);
                                                                 }
                                                             }
