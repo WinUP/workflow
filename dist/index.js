@@ -8,4 +8,5 @@ __export(require("./Definition"));
 __export(require("./Parameter"));
 __export(require("./Producer"));
 __export(require("./Relation"));
+__export(require("./errors"));
 //# sourceMappingURL=index.js.map

@@ -20,32 +20,60 @@ For example, in this case, run sequence should be 1 -> 2-1 -> 3 -> 2-2 -> 4 auto
 
 ### How to use
 
-0. Install.
-
-        npm install @ekifvk/workflow
+```bash
+npm install @ekifvk/workflow
+```
 
 1. Create a WorkflowManager.
 
-        const manager = new WorkflowManager();
+```typescript
+const manager = new WorkflowManager();
+```
 
 2. Create some producers.
 
-        const a = new SomeProducer();
-        const b = new SomeProducer2();
+```typescript
+const a = new SomeProducer();
+const b = new SomeProducer2();
+```
 
 3. Add relations.
 
-        // last param is the condition, use 'input' to access input data, like 'return input.a === "a"'.
-        const relationAB = new Relation(a, b, 'return true');
-        a.relation(relationAB); // or b.relation(relationAB)
+```typescript
+// last param is the condition, use 'input' to access input data, like 'return input.a === "a"'.
+const relationAB = new Relation(a, b, 'return true');
+a.relation(relationAB); // or b.relation(relationAB)
+```
 
 4. Register entrace.
 
-        manager.entrance = a;
+```typescript
+manager.entrance = a;
+```
 
 5. Run workflow.
 
-        manager.run(/* input data */).then(...);
+```typescript
+manager.run(/* input data */).then(...);
+```
+
+### Stop, pause and resume
+
+Workflow cannot pause/stop current running producer, but it can pause/stop before process next producer.
+
+```typescript
+mamager.pause().then(() => {
+    console.log('Paused!');
+});
+
+setTimeout(() => {
+    manager.resume();
+}, 3000);
+
+manager.stop().then(() => {
+    console.log('Stopped!');
+});
+```
 
 ### How to write producer
 
@@ -172,3 +200,62 @@ Elements in relations should follow this structure:
 ```
 
 Call WorkflowManager.fromDefinitions() and provide all definition objects to get a workflow. The first paramater should be a function, which has a string param as type to return an instance of Producer. Rest params will be combined to one, please notice that one and only one of them must has entrance property.
+
+
+### Example
+
+```javascript
+var workflow = require('@ekifvk/workflow');
+
+var manager = new workflow.WorkflowManager();
+
+class LogProducer extends workflow.Producer {
+    introduce() { return ''; }
+
+    parameterStructure() {
+        return {
+            log: {
+                type: workflow.ParameterType.String,
+                optional: true,
+                default: '',
+                description: 'Log content'
+            }
+        };
+    }
+
+    _produce(input) {
+        const content = this.parameters.get('log');
+        console.log(content);
+        return input;
+    }
+}
+
+var entrance = new LogProducer('entrance');
+
+var test1 = new LogProducer('test1');
+var test2 = new LogProducer('test2');
+var test3 = new LogProducer('test3');
+var test4 = new LogProducer('test4');
+var test5 = new LogProducer('test5');
+
+entrance.initialize({ log: 'entrance' });
+test1.initialize({ log: '1' });
+test2.initialize({ log: '2' });
+test3.initialize({ log: '3' });
+test4.initialize({ log: '4' });
+
+entrance.relation(new workflow.Relation(entrance, test1));
+test1.relation(new workflow.Relation(test1, test2));
+test2.relation(new workflow.Relation(test2, test3));
+test3.relation(new workflow.Relation(test3, test4));
+
+manager.entrance = entrance;
+manager.run(0)
+    .then(v => console.log(v))
+    .catch(e => console.log('error: ' + e));
+manager.pause().then(() => {
+    setTimeout(() => {
+        manager.resume();
+    }, 3000);
+})
+```

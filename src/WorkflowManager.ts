@@ -1,14 +1,20 @@
 import { WorkflowDefinition, RelationDefinition } from './Definition';
 import { ProduceResult } from './ProduceResult';
+import { asPromise } from './util';
 import { Producer } from './Producer';
 import { Relation } from './Relation';
-import { asPromise } from './util';
+import * as Errors from './errors';
 
 /**
  * Workflow manager
  */
 export class WorkflowManager {
     private _entrance: Producer | null = null;
+    private _isRunning: boolean = false;
+    private stopInjector: (() => void) | null = null;
+    private pauseInjector: (() => void) | null = null;
+    private pendingCallback: Promise<void> | null = null;
+    private pendingTrigger: (() => void) | null = null;
 
     /**
      * Entrance producer
@@ -20,8 +26,16 @@ export class WorkflowManager {
     }
 
     /**
+     * Indicate if workflow is running
+     */
+    public get isRunning(): boolean {
+        return this._isRunning;
+    }
+
+    /**
      * Load workflow fronm definitions
-     * @param activator A function that using given type string and return an instance of Producer or null (if cannot declare producer)
+     * @param activator A function that using given type string and return an instance of ```Producer```
+     * or ```null``` (if cannot instancing ```Producer```)
      * @param definitions All workflow definitions
      */
     public static fromDefinitions(activator: (type: string) => ((new (id?: string) => Producer) | null),
@@ -32,18 +46,20 @@ export class WorkflowManager {
         definitions.forEach(definition => {
             if (definition.entrance) {
                 if (entranceId) {
-                    throw new TypeError(`Cannot set ${definition.entrance} as entrance point: Entrance has already set to ${entranceId}`);
+                    throw new Errors.ConflictError(
+                        `Cannot set ${definition.entrance} as entrance point: Entrance has already set to ${entranceId}`
+                    );
                 }
                 entranceId = definition.entrance;
             }
             if (definition.producers) {
                 definition.producers.forEach(producer => {
                     if (producers.some(p => p.id === producer.id)) {
-                        throw new TypeError(`Cannot add producer ${producer.id}: Id conflict`);
+                        throw new Errors.ConflictError(`Cannot add producer ${producer.id}: Id conflict`);
                     }
                     const instanceActivator = activator(producer.type);
                     if (!instanceActivator) {
-                        throw new ReferenceError(`Cannot declare producer ${producer.id}: Activator returns nothing`);
+                        throw new TypeError(`Cannot declare producer ${producer.id}: Activator returns nothing`);
                     }
                     const instance = new instanceActivator(producer.id);
                     instance.initialize(producer.parameters);
@@ -53,7 +69,7 @@ export class WorkflowManager {
             if (definition.relations) {
                 definition.relations.forEach(relation => {
                     if (relations.some(r => r.from === relation.from && r.to === relation.to)) {
-                        throw new TypeError(`Cannot register relation: ${relation.from} -> ${relation.to} is already exist`);
+                        throw new Errors.ConflictError(`Cannot register relation: ${relation.from} -> ${relation.to} is already exist`);
                     }
                     relations.push(relation);
                 });
@@ -82,33 +98,96 @@ export class WorkflowManager {
     }
 
     /**
+     * Stop workflow. Workflow will not stop immediately but stop before process next ```Producer```,
+     * current running ```Producer``` cannot be stopped.
+     * @throws {UnavailableError} Workflow is not running.
+     * @throws {ConflictError} Workflow is in stopping progress.
+     */
+    public async stop(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            if (this._isRunning && this.stopInjector == null) {
+                this.stopInjector = () => resolve();
+            } else if (!this._isRunning) {
+                reject(new Errors.UnavailableError('Workflow is not running'));
+            } else {
+                reject(new Errors.ConflictError('Workflow is in stopping progress'));
+            }
+        });
+    }
+
+    /**
+     * Pause workflow. Workflow will not pause immediately but pause before process next ```Producer```,
+     * current running ```Producer``` will continue run until it finished.
+     * @throws {UnavailableError} Workflow is not running.
+     * @throws {ConflictError} Workflow is in pausing progress.
+     */
+    public async pause(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            if (this._isRunning && this.pauseInjector == null) {
+                this.pauseInjector = () => resolve();
+                this.pendingCallback = new Promise<void>(callback => { this.pendingTrigger = () => callback(); });
+            } else if (!this._isRunning) {
+                reject(new Errors.UnavailableError('Workflow is not running'));
+            } else {
+                reject(new Errors.ConflictError('Workflow is in pausing progress'));
+            }
+        });
+    }
+
+    /**
+     * Resume workflow.
+     * @throws {UnavailableError} Workflow is not running or not paused.
+     */
+    public resume(): void {
+        if (this._isRunning && this.pendingTrigger != null) {
+            this.pendingTrigger();
+            this.pendingTrigger = null;
+        } else if (!this._isRunning) {
+            throw new Errors.UnavailableError('Workflow is not running');
+        } else {
+            throw new Errors.UnavailableError('Workflow is not paused');
+        }
+    }
+
+    /**
      * Run this workflow
      * @param input Input data
-     * @returns An array contains each producer's result. Regurally last one is the last producer's result.
+     * @returns An array contains each ```Producer```'s result. Regurally last one is the last ```Producer```'s result.
      */
-    public async run<T, U = T>(input: T): Promise<ProduceResult<U>[]> {
+    public async run<T, U = T>(input: T): Promise<{ data: ProduceResult<U>[], finished: boolean }> {
         if (this._entrance == null) {
-            throw new ReferenceError('Cannot run workflow: No entrance point');
+            throw new Errors.UnavailableError('Cannot run workflow: No entrance point');
         }
         let running: (ProduceResult<any[]> & { inject: { [key: string]: any } })[]
             = [{producer: this._entrance, data: [input], inject: {} }]; // 需要被执行的处理器
         const finished: Producer[] = []; // 已执行完成的处理器
         const skipped: Producer[] = []; // 需要被跳过的处理器
         const dataPool: ProduceResult<any>[] = []; // 每个处理器的结果
+        this._isRunning = true;
         while (running.length > 0) {
             const nextRound: (ProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
             for (let i = 0; i < running.length; i++) {
+                if (this.stopInjector) { // 在每个循环开始时确定是否被终止，此时直接跳出循环，running长度一定为0
+                    this.stopInjector();
+                    break;
+                }
+                if (this.pauseInjector) { // 在每个循环开始时处理暂停
+                    this.pauseInjector();
+                    this.pauseInjector = null;
+                    await this.pendingCallback;
+                    this.pendingCallback = null;
+                }
                 const runner = running[i];
                 // 仅执行：目标节点不在下一轮执行队列中，目标节点满足执行前提
                 if (!nextRound.some(r => r.producer === runner.producer) && runner.producer.fitCondition(finished, skipped)) {
                     let error: Error | null = null;
-                    const result: any[] = await asPromise<any[]>(runner.producer.produce(runner.data, runner.inject)).catch(e => error = e);
+                    const data: any[] = await asPromise<any[]>(runner.producer.produce(runner.data, runner.inject)).catch(e => error = e);
                     if (error) { throw error; }
                     finished.push(runner.producer); // 标记执行完成
-                    dataPool.push({ producer: runner.producer, data: result }); // 记录执行结果
+                    dataPool.push({ producer: runner.producer, data: data }); // 记录执行结果
                     // 处理所有子节点
                     runner.producer.children.forEach(child => {
-                        const suitableResult = result.filter(r => child.judge(r));
+                        const suitableResult = data.filter(r => child.judge(r));
                         if (suitableResult.length > 0) {
                             // 从下一轮执行队列中寻找目标节点
                             let newRunner = nextRound.find(r => r.producer === child.to);
@@ -138,11 +217,14 @@ export class WorkflowManager {
             }
             running = nextRound;
         }
-        return dataPool;
+        const result = { data: dataPool, finished: this.stopInjector == null };
+        this.stopInjector = null;
+        this._isRunning = false;
+        return result;
     }
 
     /**
-     * Validate current workflow to find any unreachable producer
+     * Validate current workflow to find any unreachable producers.
      */
     public validate(): Producer[] {
         if (this._entrance) {
