@@ -1,4 +1,12 @@
 "use strict";
+var __assign = (this && this.__assign) || Object.assign || function(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+        s = arguments[i];
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+            t[p] = s[p];
+    }
+    return t;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -149,6 +157,9 @@ var WorkflowManager = /** @class */ (function () {
                 return [2 /*return*/, new Promise(function (resolve, reject) {
                         if (_this._isRunning && _this.stopInjector == null) {
                             _this.stopInjector = function () { return resolve(); };
+                            if (_this.pendingTrigger != null) {
+                                _this.resume();
+                            }
                         }
                         else if (!_this._isRunning) {
                             reject(new Errors.UnavailableError('Workflow is not running'));
@@ -231,10 +242,6 @@ var WorkflowManager = /** @class */ (function () {
                                             return __generator(this, function (_a) {
                                                 switch (_a.label) {
                                                     case 0:
-                                                        if (this_1.stopInjector) { // 在每个循环开始时确定是否被终止，此时直接跳出循环，running长度一定为0
-                                                            this_1.stopInjector();
-                                                            return [2 /*return*/, "break"];
-                                                        }
                                                         if (!this_1.pauseInjector) return [3 /*break*/, 2];
                                                         this_1.pauseInjector();
                                                         this_1.pauseInjector = null;
@@ -244,6 +251,10 @@ var WorkflowManager = /** @class */ (function () {
                                                         this_1.pendingCallback = null;
                                                         _a.label = 2;
                                                     case 2:
+                                                        if (this_1.stopInjector) { // 在每个循环开始时确定是否被终止，此时直接跳出循环，running长度一定为0
+                                                            this_1.stopInjector();
+                                                            return [2 /*return*/, "break"];
+                                                        }
                                                         runner = running[i];
                                                         if (!(!nextRound.some(function (r) { return r.producer === runner.producer; }) && runner.producer.fitCondition(finished, skipped))) return [3 /*break*/, 4];
                                                         error_1 = null;
@@ -282,6 +293,7 @@ var WorkflowManager = /** @class */ (function () {
                                                         existedRunner = nextRound.find(function (r) { return r.producer === runner.producer; });
                                                         if (existedRunner) {
                                                             existedRunner.data = existedRunner.data.concat(runner.data);
+                                                            existedRunner.inject = __assign({}, existedRunner.inject, runner.inject);
                                                         }
                                                         else {
                                                             nextRound.push(runner);

@@ -1,6 +1,6 @@
 {
   "name": "@ekifvk/workflow",
-  "version": "1.4.0",
+  "version": "1.4.2",
   "description": "Simple Workflow controller",
   "scripts": {
     "prepublishOnly": "npm run build",

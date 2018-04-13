@@ -107,6 +107,9 @@ export class WorkflowManager {
         return new Promise<void>((resolve, reject) => {
             if (this._isRunning && this.stopInjector == null) {
                 this.stopInjector = () => resolve();
+                if (this.pendingTrigger != null) {
+                    this.resume();
+                }
             } else if (!this._isRunning) {
                 reject(new Errors.UnavailableError('Workflow is not running'));
             } else {
@@ -167,15 +170,15 @@ export class WorkflowManager {
         while (running.length > 0) {
             const nextRound: (ProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
             for (let i = 0; i < running.length; i++) {
-                if (this.stopInjector) { // 在每个循环开始时确定是否被终止，此时直接跳出循环，running长度一定为0
-                    this.stopInjector();
-                    break;
-                }
                 if (this.pauseInjector) { // 在每个循环开始时处理暂停
                     this.pauseInjector();
                     this.pauseInjector = null;
                     await this.pendingCallback;
                     this.pendingCallback = null;
+                }
+                if (this.stopInjector) { // 在每个循环开始时确定是否被终止，此时直接跳出循环，running长度一定为0
+                    this.stopInjector();
+                    break;
                 }
                 const runner = running[i];
                 // 仅执行：目标节点不在下一轮执行队列中，目标节点满足执行前提
@@ -210,6 +213,7 @@ export class WorkflowManager {
                     const existedRunner = nextRound.find(r => r.producer === runner.producer);
                     if (existedRunner) {
                         existedRunner.data = [...existedRunner.data, ...runner.data];
+                        existedRunner.inject = { ...existedRunner.inject, ...runner.inject };
                     } else {
                         nextRound.push(runner);
                     }
