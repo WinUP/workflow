@@ -7,6 +7,8 @@ import { Producer } from './Producer';
 export declare class WorkflowManager {
     private _entrance;
     private _isRunning;
+    private _finishedNodes;
+    private _skippedNodes;
     private stopInjector;
     private pauseInjector;
     private pendingCallback;
@@ -19,6 +21,14 @@ export declare class WorkflowManager {
      * Indicate if workflow is running
      */
     readonly isRunning: boolean;
+    /**
+     * Get all node ids that skipped in running
+     */
+    readonly skipped: ReadonlyArray<string>;
+    /**
+     * Get all node ids that finished in running
+     */
+    readonly finished: ReadonlyArray<string>;
     /**
      * Load workflow fronm definitions
      * @param activator A function that using given type string and return an instance of ```Producer```
@@ -59,5 +69,5 @@ export declare class WorkflowManager {
      */
     validate(): Producer[];
     private generateMap(entrance, searchDirection, touchable, allNode);
-    private static skipProducer(target, skipped);
+    private skipProducer(target, skipped);
 }

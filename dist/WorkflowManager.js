@@ -53,6 +53,8 @@ var WorkflowManager = /** @class */ (function () {
     function WorkflowManager() {
         this._entrance = null;
         this._isRunning = false;
+        this._finishedNodes = [];
+        this._skippedNodes = [];
         this.stopInjector = null;
         this.pauseInjector = null;
         this.pendingCallback = null;
@@ -77,6 +79,26 @@ var WorkflowManager = /** @class */ (function () {
          */
         get: function () {
             return this._isRunning;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(WorkflowManager.prototype, "skipped", {
+        /**
+         * Get all node ids that skipped in running
+         */
+        get: function () {
+            return this._skippedNodes;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(WorkflowManager.prototype, "finished", {
+        /**
+         * Get all node ids that finished in running
+         */
+        get: function () {
+            return this._finishedNodes;
         },
         enumerable: true,
         configurable: true
@@ -219,6 +241,7 @@ var WorkflowManager = /** @class */ (function () {
      */
     WorkflowManager.prototype.run = function (input) {
         return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
             var running, finished, skipped, dataPool, _loop_1, this_1, result;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -226,7 +249,12 @@ var WorkflowManager = /** @class */ (function () {
                         if (this._entrance == null) {
                             throw new Errors.UnavailableError('Cannot run workflow: No entrance point');
                         }
+                        if (this._isRunning) {
+                            throw new Errors.ConflictError('Workflow is already running');
+                        }
                         running = [{ producer: this._entrance, data: [input], inject: {} }];
+                        this._finishedNodes = [];
+                        this._skippedNodes = [];
                         finished = [];
                         skipped = [];
                         dataPool = [];
@@ -265,6 +293,7 @@ var WorkflowManager = /** @class */ (function () {
                                                             throw error_1;
                                                         }
                                                         finished.push(runner.producer); // 标记执行完成
+                                                        this_1._finishedNodes.push(runner.producer.id);
                                                         dataPool.push({ producer: runner.producer, data: data_1 }); // 记录执行结果
                                                         // 处理所有子节点
                                                         runner.producer.children.forEach(function (child) {
@@ -285,7 +314,7 @@ var WorkflowManager = /** @class */ (function () {
                                                             }
                                                             else {
                                                                 // 满足条件的数据不存在视为跳过目标节点
-                                                                WorkflowManager.skipProducer(child.to, skipped);
+                                                                _this.skipProducer(child.to, skipped);
                                                             }
                                                         });
                                                         return [3 /*break*/, 5];
@@ -370,11 +399,13 @@ var WorkflowManager = /** @class */ (function () {
             });
         }
     };
-    WorkflowManager.skipProducer = function (target, skipped) {
+    WorkflowManager.prototype.skipProducer = function (target, skipped) {
+        var _this = this;
         skipped.push(target);
+        this._skippedNodes.push(target.id);
         target.children.forEach(function (child) {
             if (child.to.parents.every(function (p) { return skipped.includes(p.from); })) {
-                WorkflowManager.skipProducer(child.to, skipped);
+                _this.skipProducer(child.to, skipped);
             }
         });
     };

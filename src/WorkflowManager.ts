@@ -11,6 +11,8 @@ import * as Errors from './errors';
 export class WorkflowManager {
     private _entrance: Producer | null = null;
     private _isRunning: boolean = false;
+    private _finishedNodes: string[]  = [];
+    private _skippedNodes: string[]  = [];
     private stopInjector: (() => void) | null = null;
     private pauseInjector: (() => void) | null = null;
     private pendingCallback: Promise<void> | null = null;
@@ -30,6 +32,20 @@ export class WorkflowManager {
      */
     public get isRunning(): boolean {
         return this._isRunning;
+    }
+
+    /**
+     * Get all node ids that skipped in running
+     */
+    public get skipped(): ReadonlyArray<string> {
+        return this._skippedNodes;
+    }
+
+    /**
+     * Get all node ids that finished in running
+     */
+    public get finished(): ReadonlyArray<string> {
+        return this._finishedNodes;
     }
 
     /**
@@ -161,8 +177,13 @@ export class WorkflowManager {
         if (this._entrance == null) {
             throw new Errors.UnavailableError('Cannot run workflow: No entrance point');
         }
+        if (this._isRunning) {
+            throw new Errors.ConflictError('Workflow is already running');
+        }
         let running: (ProduceResult<any[]> & { inject: { [key: string]: any } })[]
             = [{producer: this._entrance, data: [input], inject: {} }]; // 需要被执行的处理器
+        this._finishedNodes = [];
+        this._skippedNodes = [];
         const finished: Producer[] = []; // 已执行完成的处理器
         const skipped: Producer[] = []; // 需要被跳过的处理器
         const dataPool: ProduceResult<any>[] = []; // 每个处理器的结果
@@ -187,6 +208,7 @@ export class WorkflowManager {
                     const data: any[] = await asPromise<any[]>(runner.producer.produce(runner.data, runner.inject)).catch(e => error = e);
                     if (error) { throw error; }
                     finished.push(runner.producer); // 标记执行完成
+                    this._finishedNodes.push(runner.producer.id);
                     dataPool.push({ producer: runner.producer, data: data }); // 记录执行结果
                     // 处理所有子节点
                     runner.producer.children.forEach(child => {
@@ -205,7 +227,7 @@ export class WorkflowManager {
                             }
                         } else {
                             // 满足条件的数据不存在视为跳过目标节点
-                            WorkflowManager.skipProducer(child.to, skipped);
+                            this.skipProducer(child.to, skipped);
                         }
                     });
                 } else {
@@ -258,11 +280,12 @@ export class WorkflowManager {
         }
     }
 
-    private static skipProducer(target: Producer, skipped: Producer[]): void {
+    private skipProducer(target: Producer, skipped: Producer[]): void {
         skipped.push(target);
+        this._skippedNodes.push(target.id);
         target.children.forEach(child => {
             if (child.to.parents.every(p => skipped.includes(p.from))) {
-                WorkflowManager.skipProducer(child.to, skipped);
+                this.skipProducer(child.to, skipped);
             }
         });
     }
