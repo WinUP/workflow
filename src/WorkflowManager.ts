@@ -10,6 +10,7 @@ import * as Errors from './errors';
  */
 export class WorkflowManager {
     private _entrance: Producer | null = null;
+    private _output: Producer | null = null;
     private _isRunning: boolean = false;
     private _finishedNodes: string[]  = [];
     private _skippedNodes: string[]  = [];
@@ -22,9 +23,24 @@ export class WorkflowManager {
      * Entrance producer
      */
     public get entrance(): Producer | null {
+        if (this._isRunning) {
+            throw new Errors.ConflictError('Workflow is running');
+        }
         return this._entrance;
     } public set entrance(value) {
         this._entrance = value;
+    }
+
+    /**
+     * Output producer. If not set, workflow will return all producer's output data after run.
+     */
+    public get output(): Producer | null {
+        if (this._isRunning) {
+            throw new Errors.ConflictError('Workflow is running');
+        }
+        return this._output;
+    } public set output(value) {
+        this._output = value;
     }
 
     /**
@@ -46,6 +62,20 @@ export class WorkflowManager {
      */
     public get finished(): ReadonlyArray<string> {
         return this._finishedNodes;
+    }
+
+    /**
+     * Validate current workflow to find any unreachable producers.
+     */
+    public get unreachableNodes(): Producer[] {
+        if (this._entrance) {
+            const reachable: Producer[] = [this._entrance];
+            const allNode: Producer[] = [];
+            this.generateMap(this._entrance, 'down', reachable, allNode);
+            return allNode.filter(node => !reachable.includes(node));
+        } else {
+            return [];
+        }
     }
 
     /**
@@ -171,7 +201,10 @@ export class WorkflowManager {
     /**
      * Run this workflow
      * @param input Input data
-     * @returns An array contains each ```Producer```'s result. Regurally last one is the last ```Producer```'s result.
+     * @returns An array contains each ```Producer```'s result if no output set, regurally last one is the last ```Producer```'s result.
+     * If ```this.output``` is not null, this array will only contains ```this.output```'s result.
+     * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
+     * useful, typically it can highly reduce memory usage.
      */
     public async run<T, U = T>(input: T): Promise<{ data: ProduceResult<U>[], finished: boolean }> {
         if (this._entrance == null) {
@@ -187,6 +220,7 @@ export class WorkflowManager {
         const finished: Producer[] = []; // 已执行完成的处理器
         const skipped: Producer[] = []; // 需要被跳过的处理器
         const dataPool: ProduceResult<any>[] = []; // 每个处理器的结果
+        const needClean: Producer[] = []; // 待清理的处理器
         this._isRunning = true;
         while (running.length > 0) {
             const nextRound: (ProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
@@ -208,6 +242,7 @@ export class WorkflowManager {
                     const data: any[] = await asPromise<any[]>(runner.producer.produce(runner.data, runner.inject)).catch(e => error = e);
                     if (error) { throw error; }
                     finished.push(runner.producer); // 标记执行完成
+                    if (this._output && runner.producer !== this._output) { needClean.push(runner.producer); } // 标记待清理
                     this._finishedNodes.push(runner.producer.id);
                     dataPool.push({ producer: runner.producer, data: data }); // 记录执行结果
                     // 处理所有子节点
@@ -241,26 +276,28 @@ export class WorkflowManager {
                     }
                 }
             }
+            /// 如果设置终点则回收内存
+            if (this._output) {
+                let i: number = 0;
+                while (i < needClean.length) {
+                    const producer = needClean[i];
+                    if (producer.children.every(v => finished.includes(v.to) || skipped.includes(v.to))) {
+                        const index = dataPool.findIndex(v => v.producer === producer);
+                        if (index > -1) {
+                            dataPool.splice(index, 1);
+                        }
+                        needClean.splice(i, 1);
+                    } else {
+                        i++;
+                    }
+                }
+            }
             running = nextRound;
         }
         const result = { data: dataPool, finished: this.stopInjector == null };
         this.stopInjector = null;
         this._isRunning = false;
         return result;
-    }
-
-    /**
-     * Validate current workflow to find any unreachable producers.
-     */
-    public validate(): Producer[] {
-        if (this._entrance) {
-            const touchable: Producer[] = [this._entrance];
-            const allNode: Producer[] = [];
-            this.generateMap(this._entrance, 'down', touchable, allNode);
-            return allNode.filter(node => !touchable.includes(node));
-        } else {
-            return [];
-        }
     }
 
     private generateMap(entrance: Producer, searchDirection: 'up' | 'down' | 'both', touchable: Producer[], allNode: Producer[]): void {

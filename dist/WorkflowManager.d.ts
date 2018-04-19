@@ -6,6 +6,7 @@ import { Producer } from './Producer';
  */
 export declare class WorkflowManager {
     private _entrance;
+    private _output;
     private _isRunning;
     private _finishedNodes;
     private _skippedNodes;
@@ -18,6 +19,10 @@ export declare class WorkflowManager {
      */
     entrance: Producer | null;
     /**
+     * Output producer. If not set, workflow will return all producer's output data after run.
+     */
+    output: Producer | null;
+    /**
      * Indicate if workflow is running
      */
     readonly isRunning: boolean;
@@ -29,6 +34,10 @@ export declare class WorkflowManager {
      * Get all node ids that finished in running
      */
     readonly finished: ReadonlyArray<string>;
+    /**
+     * Validate current workflow to find any unreachable producers.
+     */
+    readonly unreachableNodes: Producer[];
     /**
      * Load workflow fronm definitions
      * @param activator A function that using given type string and return an instance of ```Producer```
@@ -58,16 +67,15 @@ export declare class WorkflowManager {
     /**
      * Run this workflow
      * @param input Input data
-     * @returns An array contains each ```Producer```'s result. Regurally last one is the last ```Producer```'s result.
+     * @returns An array contains each ```Producer```'s result if no output set, regurally last one is the last ```Producer```'s result.
+     * If ```this.output``` is not null, this array will only contains ```this.output```'s result.
+     * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
+     * useful, typically it can highly reduce memory usage.
      */
     run<T, U = T>(input: T): Promise<{
         data: ProduceResult<U>[];
         finished: boolean;
     }>;
-    /**
-     * Validate current workflow to find any unreachable producers.
-     */
-    validate(): Producer[];
     private generateMap(entrance, searchDirection, touchable, allNode);
     private skipProducer(target, skipped);
 }

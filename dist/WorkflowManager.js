@@ -52,6 +52,7 @@ var Errors = require("./errors");
 var WorkflowManager = /** @class */ (function () {
     function WorkflowManager() {
         this._entrance = null;
+        this._output = null;
         this._isRunning = false;
         this._finishedNodes = [];
         this._skippedNodes = [];
@@ -65,10 +66,29 @@ var WorkflowManager = /** @class */ (function () {
          * Entrance producer
          */
         get: function () {
+            if (this._isRunning) {
+                throw new Errors.ConflictError('Workflow is running');
+            }
             return this._entrance;
         },
         set: function (value) {
             this._entrance = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(WorkflowManager.prototype, "output", {
+        /**
+         * Output producer. If not set, workflow will return all producer's output data after run.
+         */
+        get: function () {
+            if (this._isRunning) {
+                throw new Errors.ConflictError('Workflow is running');
+            }
+            return this._output;
+        },
+        set: function (value) {
+            this._output = value;
         },
         enumerable: true,
         configurable: true
@@ -99,6 +119,24 @@ var WorkflowManager = /** @class */ (function () {
          */
         get: function () {
             return this._finishedNodes;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(WorkflowManager.prototype, "unreachableNodes", {
+        /**
+         * Validate current workflow to find any unreachable producers.
+         */
+        get: function () {
+            if (this._entrance) {
+                var reachable_1 = [this._entrance];
+                var allNode = [];
+                this.generateMap(this._entrance, 'down', reachable_1, allNode);
+                return allNode.filter(function (node) { return !reachable_1.includes(node); });
+            }
+            else {
+                return [];
+            }
         },
         enumerable: true,
         configurable: true
@@ -237,12 +275,15 @@ var WorkflowManager = /** @class */ (function () {
     /**
      * Run this workflow
      * @param input Input data
-     * @returns An array contains each ```Producer```'s result. Regurally last one is the last ```Producer```'s result.
+     * @returns An array contains each ```Producer```'s result if no output set, regurally last one is the last ```Producer```'s result.
+     * If ```this.output``` is not null, this array will only contains ```this.output```'s result.
+     * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
+     * useful, typically it can highly reduce memory usage.
      */
     WorkflowManager.prototype.run = function (input) {
         return __awaiter(this, void 0, void 0, function () {
             var _this = this;
-            var running, finished, skipped, dataPool, _loop_1, this_1, result;
+            var running, finished, skipped, dataPool, needClean, _loop_1, this_1, result;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -258,9 +299,10 @@ var WorkflowManager = /** @class */ (function () {
                         finished = [];
                         skipped = [];
                         dataPool = [];
+                        needClean = [];
                         this._isRunning = true;
                         _loop_1 = function () {
-                            var nextRound, _loop_2, i, state_1;
+                            var nextRound, _loop_2, i, state_1, i, _loop_3;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
@@ -293,6 +335,9 @@ var WorkflowManager = /** @class */ (function () {
                                                             throw error_1;
                                                         }
                                                         finished.push(runner.producer); // 标记执行完成
+                                                        if (this_1._output && runner.producer !== this_1._output) {
+                                                            needClean.push(runner.producer);
+                                                        } // 标记待清理
                                                         this_1._finishedNodes.push(runner.producer.id);
                                                         dataPool.push({ producer: runner.producer, data: data_1 }); // 记录执行结果
                                                         // 处理所有子节点
@@ -346,6 +391,26 @@ var WorkflowManager = /** @class */ (function () {
                                         i++;
                                         return [3 /*break*/, 1];
                                     case 4:
+                                        /// 如果设置终点则回收内存
+                                        if (this_1._output) {
+                                            i = 0;
+                                            _loop_3 = function () {
+                                                var producer = needClean[i];
+                                                if (producer.children.every(function (v) { return finished.includes(v.to) || skipped.includes(v.to); })) {
+                                                    var index = dataPool.findIndex(function (v) { return v.producer === producer; });
+                                                    if (index > -1) {
+                                                        dataPool.splice(index, 1);
+                                                    }
+                                                    needClean.splice(i, 1);
+                                                }
+                                                else {
+                                                    i++;
+                                                }
+                                            };
+                                            while (i < needClean.length) {
+                                                _loop_3();
+                                            }
+                                        }
                                         running = nextRound;
                                         return [2 /*return*/];
                                 }
@@ -367,20 +432,6 @@ var WorkflowManager = /** @class */ (function () {
                 }
             });
         });
-    };
-    /**
-     * Validate current workflow to find any unreachable producers.
-     */
-    WorkflowManager.prototype.validate = function () {
-        if (this._entrance) {
-            var touchable_1 = [this._entrance];
-            var allNode = [];
-            this.generateMap(this._entrance, 'down', touchable_1, allNode);
-            return allNode.filter(function (node) { return !touchable_1.includes(node); });
-        }
-        else {
-            return [];
-        }
     };
     WorkflowManager.prototype.generateMap = function (entrance, searchDirection, touchable, allNode) {
         var _this = this;

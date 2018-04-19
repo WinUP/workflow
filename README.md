@@ -49,12 +49,17 @@ a.relation(relationAB); // or b.relation(relationAB)
 
 ```typescript
 manager.entrance = a;
+manager.output = b; // Optional. Set output will only return output's result for memory optimization.
 ```
 
 5. Run workflow.
 
 ```typescript
-manager.run(/* input data */).then(...);
+if (manager.unreachableNodes.length > 0) { // Check if workflow's DAG has unreachable nodes.
+    throw new TypeError(`Has unreachable node!`);
+} else {
+    manager.run(/* input data */).then(...);
+}
 ```
 
 ### Stop, pause and resume
@@ -89,6 +94,8 @@ protected abstract _produce(input: any[]): any[] | Promise<any[]>;
 The checkParameters function should check the parameter's type and change them if needed. The introduce function should return producer's description. The parameterStructure function should return a list of Parameter which defined initialize's parameter structure (still it has no use). The _produce function should produce the data and return new data.
 
 One more thing, producers can access their parameter by using ```this.parameters```. Of course they can handle parameters by their own, but using ```this.parameters``` will have an automatic cache & replace if ```inject``` by relation(s) is active when running.
+
+Producer should use ```this.parameters.get(/* name */)``` to get parameter in purpose to support parameter injection.
 
 ```typescript
 return input + this.prameters.get<number>('number1');
@@ -250,6 +257,10 @@ test2.relation(new workflow.Relation(test2, test3));
 test3.relation(new workflow.Relation(test3, test4));
 
 manager.entrance = entrance;
+manager.output = test3;
+if (manager.unreachableNodes.length > 0) {
+    throw new TypeError(`Has unreachable node!`);
+}
 manager.run(0)
     .then(v => console.log(v))
     .catch(e => console.log('error: ' + e));
