@@ -1,5 +1,6 @@
 # Workflow manager
 
+![status](https://img.shields.io/travis/WinUP/workflow.svg?style=flat-square)
 [![npm](https://img.shields.io/npm/v/@ekifvk/workflow.svg?style=flat-square)](https://www.npmjs.com/package/@ekifvk/workflow)
 
 Workflow manager is a suit of tools to provide workflow control in javascript. It has:
