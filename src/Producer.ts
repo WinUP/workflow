@@ -1,4 +1,4 @@
-import { ParameterDescriptor } from './Parameter';
+import { Parameter } from './Parameter';
 import { Relation } from './Relation';
 import * as UUID from 'uuid';
 
@@ -121,7 +121,7 @@ export abstract class Producer {
      * Initialize producer
      * @param params Parameter list
      */
-    public abstract initialize(params: { [key: string]: any }): void;
+    public abstract initialize(...params: any[]): void;
 
     /**
      * Get producer's description
@@ -131,7 +131,7 @@ export abstract class Producer {
     /**
      * Get producer's parameter description
      */
-    public abstract parameterStructure(): ParameterDescriptor;
+    public abstract parameterStructure(): Parameter[];
 
     /**
      * Run this producer

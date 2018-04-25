@@ -1,4 +1,4 @@
-import { ParameterDescriptor } from './Parameter';
+import { Parameter } from './Parameter';
 import { Relation } from './Relation';
 /**
  * Workflow producer
@@ -62,9 +62,7 @@ export declare abstract class Producer {
      * Initialize producer
      * @param params Parameter list
      */
-    abstract initialize(params: {
-        [key: string]: any;
-    }): void;
+    abstract initialize(...params: any[]): void;
     /**
      * Get producer's description
      */
@@ -72,7 +70,7 @@ export declare abstract class Producer {
     /**
      * Get producer's parameter description
      */
-    abstract parameterStructure(): ParameterDescriptor;
+    abstract parameterStructure(): Parameter[];
     /**
      * Run this producer
      * @param input Input data

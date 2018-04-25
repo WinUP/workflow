@@ -9,7 +9,7 @@ export interface Parameter {
     /**
      * Subparameter (in array or object)
      */
-    children?: ParameterDescriptor;
+    children?: Parameter[];
     /**
      * Is optional
      */
@@ -22,13 +22,6 @@ export interface Parameter {
      * Description
      */
     description: string;
-}
-
-/**
- * Parameter descriptor
- */
-export interface ParameterDescriptor {
-    [key: string]: Parameter;
 }
 
 /**
