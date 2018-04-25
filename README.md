@@ -1,6 +1,6 @@
 # Workflow manager
 
-[![npm](https://img.shields.io/npm/v/@ekifvk/workflow.svg?style=flat-square)](https://www.npmjs.com/package/@ekifvk/workflow)
+This is a backup of workflow 1.2.x version.
 
 Workflow manager is a suit of tools to provide workflow control in javascript. It has:
 
