@@ -260,7 +260,8 @@ export class WorkflowManager {
                             } else { // 普通数据传递
                                 newRunner.data = [...newRunner.data, ...suitableResult];
                             }
-                        } else {
+                        } else if (!(running.some(p => p.producer === child.to) || nextRound.some(p => p.producer === child.to))
+                            && child.to.parents.every(v => finished.includes(v.from) || skipped.includes(v.from))) {
                             // 满足条件的数据不存在视为跳过目标节点
                             this.skipProducer(child.to, skipped);
                         }
