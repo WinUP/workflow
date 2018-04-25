@@ -124,11 +124,6 @@ export abstract class Producer {
     public abstract initialize(...params: any[]): void;
 
     /**
-     * Get producer's description
-     */
-    public abstract introduce(): string;
-
-    /**
      * Get producer's parameter description
      */
     public abstract parameterStructure(): Parameter[];
