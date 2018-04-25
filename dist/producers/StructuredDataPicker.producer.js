@@ -71,7 +71,7 @@ var StructuredDataPickerProducer = /** @class */ (function (_super) {
                 if (input[key] == null) {
                     result_1[key] = null;
                 }
-                else if (typeof input[key] === 'object') {
+                else if (typeof input[key] === 'object') { // 数组或对象
                     result_1[key] = _this.pickData(input[key], source);
                 }
                 else if (typeof input[key] === 'string') {

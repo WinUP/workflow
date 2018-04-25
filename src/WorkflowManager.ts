@@ -112,7 +112,8 @@ export class WorkflowManager {
                                 afterRunning.push(newRunner);
                             }
                             newRunner.data = [...newRunner.data, ...suitableResult];
-                        } else {
+                        } else if (!(running.some(p => p.producer === child.to) || afterRunning.some(p => p.producer === child.to))
+                            && child.to.parents.every(v => finished.includes(v.from) || skipped.includes(v.from))) {
                             WorkflowManager.skipProducer(child.to, skipped);
                         }
                     });

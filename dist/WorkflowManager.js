@@ -173,7 +173,8 @@ var WorkflowManager = /** @class */ (function () {
                                                                 }
                                                                 newRunner.data = newRunner.data.concat(suitableResult);
                                                             }
-                                                            else {
+                                                            else if (!(running.some(function (p) { return p.producer === child.to; }) || afterRunning.some(function (p) { return p.producer === child.to; }))
+                                                                && child.to.parents.every(function (v) { return finished.includes(v.from) || skipped.includes(v.from); })) {
                                                                 WorkflowManager.skipProducer(child.to, skipped);
                                                             }
                                                         });

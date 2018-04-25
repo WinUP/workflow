@@ -18,7 +18,9 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.14.104",
-    "@types/uuid": "^3.4.3"
+    "@types/uuid": "^3.4.3",
+    "tslint": "^5.9.1",
+    "typescript": "^2.8.3"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts"

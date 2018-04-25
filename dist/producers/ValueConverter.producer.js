@@ -114,35 +114,35 @@ var ValueConverterProducer = /** @class */ (function (_super) {
             if (structure.length === 0) {
                 result = source;
             }
-            else {
+            else { // 其他情况
                 var objectStructure_1 = structure.find(function (v) { return typeof v === 'object' && v; });
                 var hasTrue_1 = structure.some(function (v) { return v === true; });
-                if (!objectStructure_1 && hasTrue_1) {
+                if (!objectStructure_1 && hasTrue_1) { // 无结构定义，存在true
                     result = source.map(function (v) { return ValueConverterProducer.pickValue(v, _this._rules); });
                 }
-                else if (objectStructure_1) {
+                else if (objectStructure_1) { // 有结构定义
                     result = source.map(function (v) {
-                        if (typeof v === 'object' && v) {
+                        if (typeof v === 'object' && v) { // 对象转换
                             return _this.convert(objectStructure_1, v);
                         }
-                        else {
+                        else { // 其他转换
                             return hasTrue_1 ? ValueConverterProducer.pickValue(v, _this._rules) : v;
                         }
                     });
                 }
-                else {
+                else { // 其他情况，视为不转换
                     result = source;
                 }
             }
         }
-        else if (typeof structure === 'object') {
+        else if (typeof structure === 'object') { // 结构定义为对象
             // 结构定义为空对象
             if (Object.keys(structure).length === 0) {
                 Object.keys(source).forEach(function (key) {
-                    if (!source[key]) {
+                    if (!source[key]) { // 空值转换
                         result[key] = ValueConverterProducer.pickValue(source[key], _this._rules);
                     }
-                    else if (typeof source[key] === 'object') {
+                    else if (typeof source[key] === 'object') { // 空对象会跳过非字面量转换
                         result[key] = source[key];
                     }
                     else {
@@ -150,7 +150,7 @@ var ValueConverterProducer = /** @class */ (function (_super) {
                     }
                 });
             }
-            else {
+            else { // 结构定义为普通对象
                 var keys = Object.keys(structure);
                 var availableKeys_1 = keys.some(function (v) { return structure[v] === false; }) // 根据是否包含false确定转换键
                     ? keys.filter(function (key) { return structure[key] !== false; })
@@ -158,19 +158,19 @@ var ValueConverterProducer = /** @class */ (function (_super) {
                 var originalKeys_1 = Object.keys(source);
                 originalKeys_1.forEach(function (key) {
                     if (availableKeys_1.includes(key)) {
-                        if (source[key] === null) {
+                        if (source[key] === null) { // 空值转换
                             result[key] = null;
                         }
-                        else if (source[key] === undefined) {
+                        else if (source[key] === undefined) { // 空值转换
                             result[key] = undefined;
                         }
-                        else if (source[key] instanceof Array) {
+                        else if (source[key] instanceof Array) { // 数组转换
                             result[key] = _this.convert(structure[key], source[key]);
                         }
-                        else if (typeof source[key] === 'object') {
+                        else if (typeof source[key] === 'object') { // 递归转换对象，已确保true/false的转换
                             result[key] = _this.convert(structure[key], source[key]);
                         }
-                        else {
+                        else { // 字面量转换
                             result[key] = ValueConverterProducer.pickValue(source[key], _this._rules);
                         }
                     }
@@ -183,7 +183,7 @@ var ValueConverterProducer = /** @class */ (function (_super) {
                 });
             }
         }
-        else {
+        else { // 其他情况，因无定义视为不转换
             result = source;
         }
         return result;
