@@ -1,4 +1,3 @@
-import { Parameter } from './Parameter';
 /**
  * Workflow definition
  */
@@ -31,7 +30,7 @@ export interface ProducerDefinition {
     /**
      * Parameters for initializer
      */
-    parameters: Parameter[];
+    parameters: any[];
     /**
      * Description
      */

@@ -33,7 +33,7 @@ export interface ProducerDefinition {
     /**
      * Parameters for initializer
      */
-    parameters: Parameter[];
+    parameters: any[];
     /**
      * Description
      */

@@ -86,7 +86,7 @@ var WorkflowManager = /** @class */ (function () {
                         throw new ReferenceError("Cannot declare producer " + producer.id + ": Activator returns nothing");
                     }
                     var instance = new instanceActivator(producer.id);
-                    instance.initialize(producer.parameters);
+                    instance.initialize.apply(instance, producer.parameters);
                     producers.push(instance);
                 });
             }
