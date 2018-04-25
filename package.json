@@ -3,9 +3,8 @@
   "version": "1.4.5",
   "description": "Simple Workflow controller",
   "scripts": {
-    "prepublishOnly": "npm run build",
-    "build": "tsc",
-    "test": "node test.js"
+    "test": "node test.js",
+    "tsc": "tsc"
   },
   "keywords": [
     "workflow"
@@ -28,6 +27,9 @@
   "devDependencies": {
     "@types/lodash": "^4.14.104",
     "@types/uuid": "^3.4.3"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts"
