@@ -64,10 +64,6 @@ export declare abstract class Producer {
      */
     abstract initialize(...params: any[]): void;
     /**
-     * Get producer's description
-     */
-    abstract introduce(): string;
-    /**
      * Get producer's parameter description
      */
     abstract parameterStructure(): Parameter[];

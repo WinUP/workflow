@@ -5,7 +5,7 @@ export interface Parameter {
     /**
      * Type, see ParameterType for more information
      */
-    type: number;
+    type: string | number;
     /**
      * Subparameter (in array or object)
      */
