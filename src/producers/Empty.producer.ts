@@ -2,7 +2,7 @@ import { ParameterDescriptor } from '../Parameter';
 import { Producer } from '../Producer';
 
 /**
- * Data picker producer
+ * Empty producer
  */
 export class EmptyProducer extends Producer {
 
@@ -14,7 +14,7 @@ export class EmptyProducer extends Producer {
         return { };
     }
 
-    protected _produce(input: any[]): any[] | Promise<any[]> {
+    protected produce(input: any[]): any[] | Promise<any[]> {
         return input;
     }
 }

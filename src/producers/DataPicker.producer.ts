@@ -1,4 +1,5 @@
 import { ParameterDescriptor, ParameterType } from '../Parameter';
+import { ParameterTable } from '../ParamaterTable';
 import { Producer } from '../Producer';
 import * as JPQuery from '@ekifvk/jpquery';
 
@@ -32,8 +33,8 @@ export class DataPickerProducer extends Producer {
         };
     }
 
-    protected _produce(input: any[]): any[] | Promise<any[]> {
-        const query = this.parameters.get<JPQuery.AnalyzerUnit[]>('query');
+    protected produce(input: any[], activeParams: ParameterTable): any[] | Promise<any[]> {
+        const query = activeParams.get<JPQuery.AnalyzerUnit[]>('query');
         if (!query) {
             throw new TypeError(`Data picker ${this.id}: No query string`);
         }

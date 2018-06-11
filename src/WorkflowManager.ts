@@ -1,6 +1,6 @@
 import { WorkflowDefinition, RelationDefinition } from './Definition';
 import { ProduceResult } from './ProduceResult';
-import { asPromise } from './util';
+import { asPromise } from './Utilities';
 import { Producer } from './Producer';
 import { Relation } from './Relation';
 import * as Errors from './errors';
@@ -9,20 +9,20 @@ import * as Errors from './errors';
  * Workflow manager
  */
 export class WorkflowManager {
-    private _entrance: Producer | null = null;
-    private _output: Producer | null = null;
+    private _entrance: Producer | undefined;
+    private _output: Producer | undefined;
     private _isRunning: boolean = false;
-    private _finishedNodes: string[]  = [];
-    private _skippedNodes: string[]  = [];
-    private stopInjector: (() => void) | null = null;
-    private pauseInjector: (() => void) | null = null;
-    private pendingCallback: Promise<void> | null = null;
-    private pendingTrigger: (() => void) | null = null;
+    private _finishedNodes: string[] = [];
+    private _skippedNodes: string[] = [];
+    private stopInjector: (() => void) | undefined;
+    private pauseInjector: (() => void) | undefined;
+    private pendingCallback: Promise<void> | undefined;
+    private pendingTrigger: (() => void) | undefined;
 
     /**
      * Entrance producer
      */
-    public get entrance(): Producer | null {
+    public get entrance(): Producer | undefined {
         if (this._isRunning) {
             throw new Errors.ConflictError('Workflow is running');
         }
@@ -34,7 +34,7 @@ export class WorkflowManager {
     /**
      * Output producer. If not set, workflow will return all producer's output data after run.
      */
-    public get output(): Producer | null {
+    public get output(): Producer | undefined {
         if (this._isRunning) {
             throw new Errors.ConflictError('Workflow is running');
         }
@@ -190,7 +190,7 @@ export class WorkflowManager {
     public resume(): void {
         if (this._isRunning && this.pendingTrigger != null) {
             this.pendingTrigger();
-            this.pendingTrigger = null;
+            this.pendingTrigger = undefined;
         } else if (!this._isRunning) {
             throw new Errors.UnavailableError('Workflow is not running');
         } else {
@@ -214,7 +214,7 @@ export class WorkflowManager {
             throw new Errors.ConflictError('Workflow is already running');
         }
         let running: (ProduceResult<any[]> & { inject: { [key: string]: any } })[]
-            = [{producer: this._entrance, data: [input], inject: {} }]; // 需要被执行的处理器
+            = [{ producer: this._entrance, data: [input], inject: {} }]; // 需要被执行的处理器
         this._finishedNodes = [];
         this._skippedNodes = [];
         const finished: Producer[] = []; // 已执行完成的处理器
@@ -227,9 +227,9 @@ export class WorkflowManager {
             for (let i = 0; i < running.length; i++) {
                 if (this.pauseInjector) { // 在每个循环开始时处理暂停
                     this.pauseInjector();
-                    this.pauseInjector = null;
+                    this.pauseInjector = undefined;
                     await this.pendingCallback;
-                    this.pendingCallback = null;
+                    this.pendingCallback = undefined;
                 }
                 if (this.stopInjector) { // 在每个循环开始时确定是否被终止，此时直接跳出循环，running长度一定为0
                     this.stopInjector();
@@ -239,7 +239,8 @@ export class WorkflowManager {
                 // 仅执行：目标节点不在下一轮执行队列中，目标节点满足执行前提
                 if (!nextRound.some(r => r.producer === runner.producer) && runner.producer.fitCondition(finished, skipped)) {
                     let error: Error | null = null;
-                    const data: any[] = await asPromise<any[]>(runner.producer.produce(runner.data, runner.inject)).catch(e => error = e);
+                    const data: any[] = await asPromise<any[]>(runner.producer.prepareExecute(runner.data, runner.inject))
+                        .catch(e => error = e);
                     if (error) { throw error; }
                     finished.push(runner.producer); // 标记执行完成
                     if (this._output && runner.producer !== this._output) { needClean.push(runner.producer); } // 标记待清理
@@ -296,8 +297,22 @@ export class WorkflowManager {
             running = nextRound;
         }
         const result = { data: dataPool, finished: this.stopInjector == null };
-        this.stopInjector = null;
+        this.stopInjector = undefined;
         this._isRunning = false;
+        return result;
+    }
+
+    /**
+     * Create a new ```WorkflowManager``` that shares workflow definition with current instance but has its own running status
+     * @description This means that new manager and this instance targeting same workflow definition (same entrance, same output, etc),
+     * which means if any producer in workflow definition does not support multi-thread environment (like promise), both manager's
+     * running results may contain error. Basically, if no parameter injector in using or producer use ```activeParams``` to
+     * get parameters, all situations will be fine.
+     */
+    public shallowClone(): WorkflowManager {
+        const result = new WorkflowManager();
+        result._entrance = this._entrance;
+        result._output = this._output;
         return result;
     }
 

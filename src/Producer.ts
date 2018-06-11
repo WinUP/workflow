@@ -1,7 +1,6 @@
 import { isSpecialParameter, SpecialParameterType } from './Definition';
 import { ParameterDescriptor } from './Parameter';
 import { ParameterTable } from './ParamaterTable';
-import { asPromise } from './util';
 import { Relation } from './Relation';
 import * as UUID from 'uuid';
 
@@ -12,47 +11,35 @@ export abstract class Producer {
     /**
      * Get producer's parameter table
      */
-    protected get parameters(): ParameterTable {
-        return this._parameters;
-    }
-    private _parameters: ParameterTable = new ParameterTable();
+    public readonly parameters: ParameterTable = new ParameterTable();
 
     /**
      * Get producer's parents
      */
-    public get parents(): Relation[] {
-        return this._parents;
-    }
-    private _parents: Relation[] = [];
+    public readonly parents: Relation[] = [];
 
     /**
      * Get producer's children
      */
-    public get children(): Relation[] {
-        return this._children;
-    }
-    private _children: Relation[] = [];
+    public readonly children: Relation[] = [];
 
     /**
      * Get producer's ID
      */
-    public get id(): string {
-        return this._id;
-    }
-    private _id: string;
+    public readonly id: string;
 
     /**
      * Indicate if producer has no parent
      */
     public get isRoot(): boolean {
-        return this._parents.length === 0;
+        return this.parents.length === 0;
     }
 
     /**
      * Indicate if producer has no children
      */
     public get isYoungest(): boolean {
-        return this._children.length === 0;
+        return this.children.length === 0;
     }
 
     /**
@@ -60,7 +47,7 @@ export abstract class Producer {
      * @param id Producer's id. If not given, an UUID will be created instead.
      */
     public constructor(id?: string) {
-        this._id = id ? id : UUID.v4().toUpperCase();
+        this.id = id || UUID.v4().toUpperCase();
     }
 
     /**
@@ -68,7 +55,7 @@ export abstract class Producer {
      * @param parent Target producer
      */
     public isBelongsTo(parent: Producer): boolean {
-        return this._parents.some(p => p.from === parent);
+        return this.parents.some(p => p.from === parent);
     }
 
     /**
@@ -76,7 +63,7 @@ export abstract class Producer {
      * @param child Target producer
      */
     public isParentOf(child: Producer): boolean {
-        return this._children.some(c => c.to === child);
+        return this.children.some(c => c.to === child);
     }
 
     /**
@@ -85,11 +72,11 @@ export abstract class Producer {
      */
     public relation(relation: Relation): this {
         if (relation.from === this) {
-            this._children.push(relation);
-            relation.to._parents.push(relation);
+            this.children.push(relation);
+            relation.to.parents.push(relation);
         } else if (relation.to === this) {
-            this._parents.push(relation);
-            relation.from._children.push(relation);
+            this.parents.push(relation);
+            relation.from.children.push(relation);
         } else {
             throw new ReferenceError(`Cannot add relation to ${this.id}: Relation has no target mentioned this producer`);
         }
@@ -102,11 +89,11 @@ export abstract class Producer {
      */
     public breakRelation(target: Producer): this {
         if (this.isBelongsTo(target)) {
-            this._parents.splice(this._parents.findIndex(p => p.from === target));
-            target._children.splice(target._children.findIndex(c => c.to === this));
+            this.parents.splice(this.parents.findIndex(p => p.from === target));
+            target.children.splice(target.children.findIndex(c => c.to === this));
         } else if (this.isParentOf(target)) {
-            this._children.splice(this._children.findIndex(c => c.to === target));
-            target._parents.splice(target._parents.findIndex(p => p.from === this));
+            this.children.splice(this.children.findIndex(c => c.to === target));
+            target.parents.splice(target.parents.findIndex(p => p.from === this));
         } else {
             throw new ReferenceError(`Cannot break link between ${this.id} and ${target.id}: No relationship existed`);
         }
@@ -122,7 +109,7 @@ export abstract class Producer {
         if (this.isRoot) {
             return true;
         }
-        if (this._parents.some(p => !skippedProducers.includes(p.from) && !finishedProducers.includes(p.from))) {
+        if (this.parents.some(p => !skippedProducers.includes(p.from) && !finishedProducers.includes(p.from))) {
             return false;
         }
         return true;
@@ -142,20 +129,22 @@ export abstract class Producer {
      * Run this producer
      * @param input Input data
      */
-    public produce(input: any[], params: { [key: string]: any }): any[] | Promise<any[]> {
+    public prepareExecute(input: any[], params: { [key: string]: any }): any[] | Promise<any[]> {
         const keys = Object.keys(params);
         if (keys.length === 0) {
-            return this._produce(input);
+            return this.produce(input, this.parameters);
         } else {
-            const cache: { [key: string]: any } = {};
-            keys.forEach(key => cache[key] = this.parameters.get(key));
-            this.parameters.patch(this.checkParameters(params));
-            const output = this._produce(input);
-            this.parameters.patch(cache);
+            const activeParameters = this.parameters.clone();
+            activeParameters.patch(this.checkParameters(params));
+            const output = this.produce(input, activeParameters);
             return output;
         }
     }
 
+    /**
+     * Check parameters when new parameters set
+     * @param params New parameters
+     */
     protected checkParameters(params: { [key: string]: any }): { [key: string]: any } {
         return params;
     }
@@ -170,7 +159,7 @@ export abstract class Producer {
      */
     public abstract parameterStructure(): ParameterDescriptor;
 
-    protected abstract _produce(input: any[]): any[] | Promise<any[]>;
+    protected abstract produce(input: any[], activeParams: ParameterTable): any[] | Promise<any[]>;
 
     private static parseParams(params: { [key: string]: any }): { [key: string]: any } {
         if (isSpecialParameter(params)) {

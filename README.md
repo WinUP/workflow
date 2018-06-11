@@ -89,20 +89,18 @@ All producers must extend Producer, which is an abstract class, they can have th
 public abstract introduce(): string;
 public abstract parameterStructure(): ParameterDescriptor;
 protected checkParameters(params: { [key: string]: any }): { [key: string]: any };
-protected abstract _produce(input: any[]): any[] | Promise<any[]>;
+protected abstract produce(input: any[], activeParams: ParameterTable): any[] | Promise<any[]>;
 ```
 
 The checkParameters function should check the parameter's type and change them if needed. The introduce function should return producer's description. The parameterStructure function should return a list of Parameter which defined initialize's parameter structure (still it has no use). The _produce function should produce the data and return new data.
 
-One more thing, producers can access their parameter by using ```this.parameters```. Of course they can handle parameters by their own, but using ```this.parameters``` will have an automatic cache & replace if ```inject``` by relation(s) is active when running.
+One more thing, producers can access their parameter by using ```activeParams```. Of course they can handle parameters by their own, but using ```activeParams``` will have an automatic cache & replace if ```inject``` by relation(s) is active when running.
 
-Producer should use ```this.parameters.get(/* name */)``` to get parameter in purpose to support parameter injection.
+Producer should use ```activeParams.get(/* name */)``` to get parameter in purpose to support parameter injection. Or it can use ```this.parameters.get(/* name */)``` to access parameters without injection.
 
 ```typescript
-return input + this.prameters.get<number>('number1');
+return input + activeParams.get<number>('number1');
 ```
-
-Parameters stores to ```this.parameter``` automatically and changed automatically based on relations.
 
 For example, a producer that returns { key, value } pairs of any object can be like this:
 
@@ -113,10 +111,10 @@ export class KeyValuePairProducer extends Producer {
     }
 
     public parameterStructure(): ParameterDescriptor| null {
-        return {};
+        return {}; // No parameter
     }
 
-    protected _produce(input: any[]): any[] | Promise<any[]> {
+    protected produce(input: any[], activeParams: ParameterTable): any[] | Promise<any[]> {
         const result: any[] = [];
         input.forEach(data => { // Map the data
             const keys = Object.keys(data).forEach(key => {
@@ -231,8 +229,13 @@ class LogProducer extends workflow.Producer {
         };
     }
 
-    _produce(input) {
-        const content = this.parameters.get('log');
+    checkParameters(params: { [key: string]: any }) {
+        params.log = params.log || '';
+        return params;
+    }
+
+    produce(input, activeParams) {
+        const content = activeParams.get('log');
         console.log(content);
         return input;
     }
@@ -259,12 +262,18 @@ test3.relation(new workflow.Relation(test3, test4));
 
 manager.entrance = entrance;
 manager.output = test3;
+
+// Check error
 if (manager.unreachableNodes.length > 0) {
     throw new TypeError(`Has unreachable node!`);
 }
+
+// Run workflow
 manager.run(0)
     .then(v => console.log(v))
     .catch(e => console.log('error: ' + e));
+
+// Pause and resume
 manager.pause().then(() => {
     setTimeout(() => {
         manager.resume();

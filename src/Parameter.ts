@@ -7,9 +7,13 @@ export interface Parameter {
      */
     type: number;
     /**
-     * Subparameter (in array or object)
+     * Subparameter (in object)
      */
-    children?: ParameterDescriptor;
+    properties?: ParameterDescriptor;
+    /**
+     * Subparameter (in array)
+     */
+    items?: Parameter[];
     /**
      * Is optional
      */
@@ -32,14 +36,15 @@ export interface ParameterDescriptor {
 }
 
 /**
- * Parameter type
+ * Type of parameter
  */
 export enum ParameterType {
-    String  = 0B1,
-    Number  = 0B10,
-    Boolean = 0B100,
-    Array   = 0B1000,
-    Object  = 0B10000,
-    Null    = 0B100000,
-    Any     = 0B111111
+    String = 1,
+    Number = 1 << 1,
+    Boolean = 1 << 2,
+    Array = 1 << 3,
+    Object = 1 << 4,
+    Null = 1 << 5,
+    Any = ParameterType.String | ParameterType.Number | ParameterType.Boolean | ParameterType.Array |
+    ParameterType.Object | ParameterType.Null
 }

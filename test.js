@@ -16,8 +16,8 @@ class LogProducer extends workflow.Producer {
         };
     }
 
-    _produce(input) {
-        const content = this.parameters.get('log');
+    produce(input, params) {
+        const content = params.get('log');
         console.log(this.id + ': ' + content);
         return input;
     }
@@ -54,4 +54,4 @@ manager.entrance = entrance;
 manager.output = test6
 manager.run(0)
     .then(async v => console.log({ producer: v.data[0].producer, data: JSON.stringify(v.data[0].data) }))
-    .catch(async e => console.log('c' + e));
+    .catch(async e => console.log(e));

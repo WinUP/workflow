@@ -1,4 +1,5 @@
 import { ParameterDescriptor, ParameterType } from '../Parameter';
+import { ParameterTable } from '../ParamaterTable';
 import { Producer } from '../Producer';
 import { isEqual } from 'lodash';
 
@@ -68,9 +69,9 @@ export class ValueConverterProducer extends Producer {
         };
     }
 
-    protected _produce(input: any[]): any[] | Promise<any[]> {
-        const rules = this.parameters.get<ValueConvertRule[]>('rules');
-        const structure = this.parameters.get<{ [key: string]: object | boolean }>('structure');
+    protected produce(input: any[], activeParams: ParameterTable): any[] | Promise<any[]> {
+        const rules = activeParams.get<ValueConvertRule[]>('rules');
+        const structure = activeParams.get<{ [key: string]: object | boolean }>('structure');
         if (!rules || !structure) {
             throw new TypeError(`Value converter ${this.id}: No rules or structure definition`);
         }
