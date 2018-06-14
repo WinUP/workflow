@@ -65,7 +65,7 @@ export class WorkflowManager {
     }
 
     /**
-     * Validate current workflow to find any unreachable producers.
+     * Validate current workflow to find any unreachable producers. This cannot judge output node.
      */
     public get unreachableNodes(): Producer[] {
         if (this._entrance) {
@@ -246,6 +246,11 @@ export class WorkflowManager {
                     if (this._output && runner.producer !== this._output) { needClean.push(runner.producer); } // 标记待清理
                     this._finishedNodes.push(runner.producer.id);
                     dataPool.push({ producer: runner.producer, data: data }); // 记录执行结果
+                    if (runner.producer === this._output) { // 如果已经到达终点则直接跳出执行队列
+                        dataPool.splice(0, dataPool.length - 2);
+                        running = [];
+                        break;
+                    }
                     // 处理所有子节点
                     runner.producer.children.forEach(child => {
                         const suitableResult = data.filter(r => child.judge(r));
@@ -306,8 +311,7 @@ export class WorkflowManager {
      * Create a new ```WorkflowManager``` that shares workflow definition with current instance but has its own running status
      * @description This means that new manager and this instance targeting same workflow definition (same entrance, same output, etc),
      * which means if any producer in workflow definition does not support multi-thread environment (like promise), both manager's
-     * running results may contain error. Basically, if no parameter injector in using or producer use ```activeParams``` to
-     * get parameters, all situations will be fine.
+     * running results may contain error.
      */
     public shallowClone(): WorkflowManager {
         const result = new WorkflowManager();

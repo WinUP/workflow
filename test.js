@@ -53,5 +53,5 @@ test5.relation(new workflow.Relation(test5, test6));
 manager.entrance = entrance;
 manager.output = test6
 manager.run(0)
-    .then(async v => console.log({ producer: v.data[0].producer, data: JSON.stringify(v.data[0].data) }))
+    .then(async v => console.log({ producer: v.data, data: JSON.stringify(v.data[0].data) }))
     .catch(async e => console.log(e));
