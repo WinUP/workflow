@@ -16,6 +16,10 @@ export interface WorkflowDefinition {
      * Entrance producer
      */
     entrance?: string;
+    /**
+     * Output producer (if have)
+     */
+    output?: string;
 }
 
 /**

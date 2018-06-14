@@ -88,15 +88,24 @@ export class WorkflowManager {
         ...definitions: WorkflowDefinition[]): WorkflowManager {
         const producers: Producer[] = [];
         const relations: RelationDefinition[] = [];
-        let entranceId: string | null = null;
+        let entranceId: string | undefined;
+        let outputId: string | undefined;
         definitions.forEach(definition => {
             if (definition.entrance) {
                 if (entranceId) {
                     throw new Errors.ConflictError(
-                        `Cannot set ${definition.entrance} as entrance point: Entrance has already set to ${entranceId}`
+                        `Cannot set ${definition.entrance} as entrance point: Entrance had already set to ${entranceId}`
                     );
                 }
                 entranceId = definition.entrance;
+            }
+            if (definition.output) {
+                if (outputId) {
+                    throw new Errors.ConflictError(
+                        `Cannot set ${definition.output} as output point: Output had already set to ${outputId}`
+                    );
+                }
+                outputId = definition.entrance;
             }
             if (definition.producers) {
                 definition.producers.forEach(producer => {
@@ -140,6 +149,13 @@ export class WorkflowManager {
         });
         const result = new WorkflowManager();
         result.entrance = entrance;
+        if (outputId) {
+            const output = producers.find(p => p.id === outputId);
+            if (!output) {
+                throw new ReferenceError(`Cannot generate workflow: Unexisted output point (prefer id ${outputId})`);
+            }
+            result.output = output;
+        }
         return result;
     }
 

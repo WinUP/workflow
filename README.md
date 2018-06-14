@@ -179,7 +179,8 @@ A JSON object can be created to define a workflow or part of workflow:
 {
     "producers": [], // Optional in each file
     "relations": [], // Optional in each file
-    "entrance": "" // Optional in each file, must has one in all files. Entrance producer's ID.
+    "entrance": "", // Optional in each file, must has one in all files. Entrance producer's ID.
+    "output": "" // Optional. Output producer's ID of workflow.
 }
 ```
 
