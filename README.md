@@ -128,6 +128,8 @@ export class KeyValuePairProducer extends Producer {
 
 ### Pre-defined producers
 
+Under '@ekifvk/workflow/dist/producers'.
+
 #### Empty producer
 
 Producer that does nothing.
