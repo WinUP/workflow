@@ -1,9 +1,10 @@
 {
   "name": "@ekifvk/workflow",
-  "version": "1.5.3",
+  "version": "1.6.0",
   "description": "Simple Workflow controller",
   "scripts": {
-    "test": "node test.js",
+    "test": "node script/test.js",
+    "copyProducer": "node script/copy-producer.js",
     "tsc": "tsc"
   },
   "keywords": [

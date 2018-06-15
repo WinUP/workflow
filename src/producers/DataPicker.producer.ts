@@ -33,7 +33,7 @@ export class DataPickerProducer extends Producer {
         };
     }
 
-    protected produce(input: any[], activeParams: ParameterTable): any[] | Promise<any[]> {
+    public produce(input: any[], activeParams: ParameterTable): any[] {
         const query = activeParams.get<JPQuery.AnalyzerUnit[]>('query');
         if (!query) {
             throw new TypeError(`Data picker ${this.id}: No query string`);

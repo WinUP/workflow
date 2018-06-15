@@ -33,3 +33,4 @@ packages/
 node_modules/
 shrinkwrap.yaml
 dist/*
+/producers/*

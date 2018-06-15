@@ -1,4 +1,4 @@
-var workflow = require('./dist');
+var workflow = require('../dist');
 
 var manager = new workflow.WorkflowManager();
 
@@ -40,15 +40,15 @@ test4.initialize({ log: '4' });
 test5.initialize({ log: '5' });
 test6.initialize({ log: '6' });
 
-entrance.relation(new workflow.Relation(entrance, test1));
-entrance.relation(new workflow.Relation(entrance, test2));
-entrance.relation(new workflow.Relation(entrance, test3));
-entrance.relation(new workflow.Relation(entrance, test4));
-test1.relation(new workflow.Relation(test1, test4, 'log'));
-test2.relation(new workflow.Relation(test2, test5, 'log'));
-test3.relation(new workflow.Relation(test3, test6, 'log'));
-test4.relation(new workflow.Relation(test4, test5));
-test5.relation(new workflow.Relation(test5, test6));
+workflow.Relation.create(entrance, test1);
+workflow.Relation.create(entrance, test2);
+workflow.Relation.create(entrance, test3);
+workflow.Relation.create(entrance, test4);
+workflow.Relation.create(test1, test4, 'log');
+workflow.Relation.create(test2, test5, 'log');
+workflow.Relation.create(test3, test6, 'log');
+workflow.Relation.create(test4, test5);
+workflow.Relation.create(test5, test6);
 
 manager.entrance = entrance;
 manager.output = test6

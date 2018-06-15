@@ -42,8 +42,8 @@ const b = new SomeProducer2();
 
 ```typescript
 // last param is the condition, use 'input' to access input data, like 'return input.a === "a"'.
-const relationAB = new Relation(a, b, 'return true');
-a.relation(relationAB); // or b.relation(relationAB)
+Relation.create(a, b, 'return input.a === a');
+Relation.create(a, b, input => input.a === a); // or use function
 ```
 
 4. Register entrace.
@@ -59,7 +59,7 @@ manager.output = b; // Optional. Set output will only return output's result for
 if (manager.unreachableNodes.length > 0) { // Check if workflow's DAG has unreachable nodes.
     throw new TypeError(`Has unreachable node!`);
 } else {
-    manager.run(/* input data */).then(...);
+    manager.run(/* input data */).then(...).catch(...);
 }
 ```
 
@@ -88,18 +88,18 @@ All producers must extend Producer, which is an abstract class, they can have th
 ```typescript
 public abstract introduce(): string;
 public abstract parameterStructure(): ParameterDescriptor;
+public abstract produce(input: any[], params: ParameterTable): any[] | Promise<any[]>;
 protected checkParameters(params: { [key: string]: any }): { [key: string]: any };
-protected abstract produce(input: any[], activeParams: ParameterTable): any[] | Promise<any[]>;
 ```
 
 The checkParameters function should check the parameter's type and change them if needed. The introduce function should return producer's description. The parameterStructure function should return a list of Parameter which defined initialize's parameter structure (still it has no use). The _produce function should produce the data and return new data.
 
-One more thing, producers can access their parameter by using ```activeParams```. Of course they can handle parameters by their own, but using ```activeParams``` will have an automatic cache & replace if ```inject``` by relation(s) is active when running.
+One more thing, producers can access their parameter by using ```params```. Of course they can handle parameters by their own, but using ```params``` will have an automatic cache & replace if ```inject``` by relation(s) is active when running.
 
-Producer should use ```activeParams.get(/* name */)``` to get parameter in purpose to support parameter injection. Or it can use ```this.parameters.get(/* name */)``` to access parameters without injection.
+Producer should use ```params.get(/* name */)``` to get parameter in purpose to support parameter injection. Or it can use ```this.parameters.get(/* name */)``` to access parameters without injection.
 
 ```typescript
-return input + activeParams.get<number>('number1');
+return input + params.get<number>('number1');
 ```
 
 For example, a producer that returns { key, value } pairs of any object can be like this:
@@ -114,7 +114,7 @@ export class KeyValuePairProducer extends Producer {
         return {}; // No parameter
     }
 
-    protected produce(input: any[], activeParams: ParameterTable): any[] | Promise<any[]> {
+    public produce(input: any[], params: ParameterTable): any[] | Promise<any[]> {
         const result: any[] = [];
         input.forEach(data => { // Map the data
             const keys = Object.keys(data).forEach(key => {
@@ -132,7 +132,22 @@ export class KeyValuePairProducer extends Producer {
 
 Producer that does nothing.
 
-#### Data picker / Structured data picker
+#### Wrap producer
+
+This producer can create a temporary producer using given code.
+
+```typescript
+const wrap = new WrapProducer();
+wrap.initialize({
+    handler: (input, params) => input // just like writing a producer
+});
+// or
+wrap.initialize({
+    handler: async (input, params) => input // Promise is also supported
+});
+```
+
+#### Data pick producer / Structured data pick producer
 
 Pick data from json object or array, see [JPQuery](https://www.npmjs.com/package/@ekifvk/jpquery)'s document for more information.
 
@@ -142,7 +157,7 @@ picker.initialize({
     query: '/times/success[-1 -> -2]'
 })
 
-const picker2 = new StructuredDataPickerProducer():
+const picker2 = new StructuredDataPickProducer():
 picker2.initialize({
     query: {
         lastTime: '/times/success[-1]',
@@ -152,12 +167,12 @@ picker2.initialize({
 });
 ```
 
-#### Value converter
+#### Value convert producer
 
 Use given structure to focus on input data\'s specific places, then using rules to convert the value. See this producer's parameterStructure() for more information.
 
 ```typescript
-const converter = new ValueConverterProducer();
+const converter = new ValueConvertProducer();
 converter.initialize({
     rules: [
         default: true,

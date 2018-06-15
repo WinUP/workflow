@@ -5,6 +5,7 @@ install: npm install
 script:
   - npm run tsc
   - npm run test
+  - npm run copyProducer
 deploy:
   provider: npm
   email: l.gholoi@outlook.com

@@ -14,7 +14,7 @@ export class EmptyProducer extends Producer {
         return { };
     }
 
-    protected produce(input: any[]): any[] | Promise<any[]> {
+    public produce(input: any[]): any[] {
         return input;
     }
 }

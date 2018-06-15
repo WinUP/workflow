@@ -39,7 +39,13 @@ export class Relation {
         return this._inject;
     }
 
-    public constructor(from: Producer, to: Producer, inject?: string, code: string | ((input: any) => boolean) = () => true) {
+    public static create(from: Producer, to: Producer, inject?: string, code?: string | ((input: any) => boolean)): Relation {
+        const relation = new Relation(from, to, inject, code);
+        from.relation(relation);
+        return relation;
+    }
+
+    private constructor(from: Producer, to: Producer, inject?: string, code: string | ((input: any) => boolean) = () => true) {
         this._from = from;
         this._to = to;
         this._inject = inject;

@@ -6,7 +6,7 @@ import * as JPQuery from '@ekifvk/jpquery';
 /**
  * Structured data picker producer
  */
-export class StructuredDataPickerProducer extends Producer {
+export class StructuredDataPickProducer extends Producer {
     public introduce(): string {
         return 'Pick data from json object or array using JPQuery using given structure. ' +
             'if any query string not starts with /, it will be copy to output\'s same place. ' +
@@ -25,12 +25,12 @@ export class StructuredDataPickerProducer extends Producer {
         };
     }
 
-    protected produce(input: any[], activeParams: ParameterTable): any[] | Promise<any[]> {
-        const query = activeParams.get<JPQuery.AnalyzerUnit[]>('query');
+    public produce(input: any[], params: ParameterTable): any[] {
+        const query = params.get<JPQuery.AnalyzerUnit[]>('query');
         if (!query) {
             throw new TypeError(`Data picker ${this.id}: No query structure`);
         }
-        return input.map(data => StructuredDataPickerProducer.pickData(query, data));
+        return input.map(data => StructuredDataPickProducer.pickData(query, data));
     }
 
     private static pickData(input: any, source: any): any {

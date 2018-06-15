@@ -85,17 +85,29 @@ export abstract class Producer {
 
     /**
      * Delete a relation
-     * @param target Target relation
+     * @param target Target relation or producer
      */
-    public breakRelation(target: Producer): this {
-        if (this.isBelongsTo(target)) {
-            this.parents.splice(this.parents.findIndex(p => p.from === target));
-            target.children.splice(target.children.findIndex(c => c.to === this));
-        } else if (this.isParentOf(target)) {
-            this.children.splice(this.children.findIndex(c => c.to === target));
-            target.parents.splice(target.parents.findIndex(p => p.from === this));
+    public breakRelation(target: Producer | Relation): this {
+        let node: Producer;
+        if (target instanceof Producer) {
+            node = target;
         } else {
-            throw new ReferenceError(`Cannot break link between ${this.id} and ${target.id}: No relationship existed`);
+            if (target.from === this) {
+                node = target.to;
+            } else if (target.to === this) {
+                node = target.from;
+            } else {
+                throw new ReferenceError(`Cannot break link ${target.from} -> ${target.to}: Relationship does not contains this`);
+            }
+        }
+        if (this.isBelongsTo(node)) {
+            this.parents.splice(this.parents.findIndex(p => p.from === node));
+            node.children.splice(node.children.findIndex(c => c.to === this));
+        } else if (this.isParentOf(node)) {
+            this.children.splice(this.children.findIndex(c => c.to === node));
+            node.parents.splice(node.parents.findIndex(p => p.from === this));
+        } else {
+            throw new ReferenceError(`Cannot break link between ${this.id} and ${node.id}: No relationship existed`);
         }
         return this;
     }
@@ -159,7 +171,7 @@ export abstract class Producer {
      */
     public abstract parameterStructure(): ParameterDescriptor;
 
-    protected abstract produce(input: any[], activeParams: ParameterTable): any[] | Promise<any[]>;
+    public abstract produce(input: any[], params: ParameterTable): any[] | Promise<any[]>;
 
     private static parseParams(params: { [key: string]: any }): { [key: string]: any } {
         if (isSpecialParameter(params)) {

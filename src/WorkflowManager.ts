@@ -145,7 +145,7 @@ export class WorkflowManager {
                 throw new ReferenceError(
                     `Cannot add relation ${relation.from} -> ${relation.to}: Child with id ${relation.to} is not exist`);
             }
-            from!.relation(new Relation(from, to, relation.inject, relation.condition || undefined));
+            Relation.create(from, to, relation.inject, relation.condition || undefined);
         });
         const result = new WorkflowManager();
         result.entrance = entrance;
