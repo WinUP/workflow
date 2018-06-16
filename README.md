@@ -60,6 +60,9 @@ if (manager.unreachableNodes.length > 0) { // Check if workflow's DAG has unreac
     throw new TypeError(`Has unreachable node!`);
 } else {
     manager.run(/* input data */).then(...).catch(...);
+
+    // Way to receive any producer's data
+    manager.resultObserver = data => ...;
 }
 ```
 
@@ -223,8 +226,20 @@ Elements in relations should follow this structure:
 }
 ```
 
-Call WorkflowManager.fromDefinitions() and provide all definition objects to get a workflow. The first paramater should be a function, which has a string param as type to return an instance of Producer. Rest params will be combined to one, please notice that one and only one of them must has entrance property.
+Call WorkflowManager.fromDefinitions() and provide all definition objects to get a workflow. The first paramater should be a function, which has a string param as type to return the constructor of Producer. Rest params will be combined to one, please notice that one and only one of them must has entrance property.
 
+```typescript
+WorkflowManager.fromDefinitions(type => {
+    switch (type) {
+        case 'empty':
+            return EmptyProducer;
+        case 'datapick':
+            return DataPickProducer;
+        default:
+            throw new TypeError(`Unknow type ${type}`);
+    }
+}, ...someDefinitions);
+```
 
 ### Example
 
@@ -296,5 +311,5 @@ manager.pause().then(() => {
     setTimeout(() => {
         manager.resume();
     }, 3000);
-})
+});
 ```

@@ -6,7 +6,8 @@ import { Relation } from './Relation';
 import * as Errors from './errors';
 
 /**
- * Workflow manager
+ * Workflow manager handles one workflow's status and may also stores workflow definition or just user other
+ * workflow manager's definition
  */
 export class WorkflowManager {
     private _entrance: Producer | undefined;
@@ -20,7 +21,12 @@ export class WorkflowManager {
     private pendingTrigger: (() => void) | undefined;
 
     /**
-     * Entrance producer
+     * If this field is not undefined, workflow manager will send each producer's result after their running
+     */
+    public resultObserver: ((result: ProduceResult<any>) => void) | undefined;
+
+    /**
+     * Workflow's entrance producer. When call ```run()``` function, this should be the first one to execute.
      */
     public get entrance(): Producer | undefined {
         if (this._isRunning) {
@@ -240,7 +246,7 @@ export class WorkflowManager {
         this._isRunning = true;
         while (running.length > 0) {
             const nextRound: (ProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
-            for (let i = 0; i < running.length; i++) {
+            for (let i = -1; ++i < running.length;) {
                 if (this.pauseInjector) { // 在每个循环开始时处理暂停
                     this.pauseInjector();
                     this.pauseInjector = undefined;
@@ -261,15 +267,18 @@ export class WorkflowManager {
                     finished.push(runner.producer); // 标记执行完成
                     if (this._output && runner.producer !== this._output) { needClean.push(runner.producer); } // 标记待清理
                     this._finishedNodes.push(runner.producer.id);
-                    dataPool.push({ producer: runner.producer, data: data }); // 记录执行结果
+                    const runningResult = { producer: runner.producer, data: data };
+                    dataPool.push(runningResult); // 记录执行结果
+                    if (this.resultObserver) { this.resultObserver(runningResult); } // 如有必要发送执行结果
                     if (runner.producer === this._output) { // 如果已经到达终点则直接跳出执行队列
                         dataPool.splice(0, dataPool.length - 2);
                         running = [];
                         break;
                     }
                     // 处理所有子节点
-                    runner.producer.children.forEach(child => {
-                        const suitableResult = data.filter(r => child.judge(r));
+                    for (let j = -1; ++j < runner.producer.children.length;) {
+                        const child = runner.producer.children[j];
+                        const suitableResult = data.filter(r => child.judge(r)); // 只放入通过条件判断的数据
                         if (suitableResult.length > 0) {
                             // 从下一轮执行队列中寻找目标节点
                             let newRunner = nextRound.find(r => r.producer === child.to);
@@ -284,10 +293,9 @@ export class WorkflowManager {
                             }
                         } else if (!(running.some(p => p.producer === child.to) || nextRound.some(p => p.producer === child.to))
                             && child.to.parents.every(v => finished.includes(v.from) || skipped.includes(v.from))) {
-                            // 满足条件的数据不存在视为跳过目标节点
-                            this.skipProducer(child.to, skipped);
+                            this.skipProducer(child.to, skipped); // 全部数据均不满足条件时视为跳过目标节点
                         }
-                    });
+                    }
                 } else {
                     // 不执行则只做执行队列去重（数据合并），上述需要执行的情况在处理子节点时自带去重
                     const existedRunner = nextRound.find(r => r.producer === runner.producer);

@@ -7,7 +7,6 @@ import * as JPQuery from '@ekifvk/jpquery';
  * Data picker producer
  */
 export class DataPickerProducer extends Producer {
-
     protected checkParameters(params: { [key: string]: any }): { [key: string]: any } {
         if (params.query !== undefined) {
             if (typeof params.query !== 'string') {

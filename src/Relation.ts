@@ -1,13 +1,13 @@
 import { Producer } from './Producer';
 
 /**
- * Workflow relation
+ * Describe directed relationship between two producers
  */
 export class Relation {
     private _from: Producer;
     private _to: Producer;
     private _inject?: string;
-    private _code: string | ((input: any) => boolean);
+    private _condition: string | ((input: any) => boolean);
 
     /**
      * Get relation's parent producer
@@ -26,19 +26,26 @@ export class Relation {
     /**
      * Get relation's condition
      */
-    public get code(): string | ((input: any) => boolean) {
-        return this._code;
+    public get condition(): string | ((input: any) => boolean) {
+        return this._condition;
     }
 
     /**
      * Get relation's inject parameter name
      * @description Inject parameter means data transfered by this relation will be inject to producer as a
-     * temporaty "initialize" parameter only for this round of produce.
+     * temporaty parameter only for next round of produce of child producer.
      */
     public get inject(): string | undefined {
         return this._inject;
     }
 
+    /**
+     * Create a new relation
+     * @param from Relation's parent producer
+     * @param to Relation's child producer
+     * @param inject Inject parameter name if have
+     * @param code Condition to judge transfered data
+     */
     public static create(from: Producer, to: Producer, inject?: string, code?: string | ((input: any) => boolean)): Relation {
         const relation = new Relation(from, to, inject, code);
         from.relation(relation);
@@ -49,19 +56,19 @@ export class Relation {
         this._from = from;
         this._to = to;
         this._inject = inject;
-        this._code = code;
+        this._condition = code;
     }
 
     /**
-     * Test the condition
+     * Test the data with condition
      * @param input Data using in this test
      */
     public judge<T = any>(input: T): boolean {
         try {
-            if (typeof this._code === 'string') {
-                return eval(`(function(input){${this._code}})(input)`) ? true : false;
+            if (typeof this._condition === 'string') {
+                return eval(`(function(input){${this._condition}})(input)`) ? true : false;
             } else {
-                return this._code(input) ? true : false;
+                return this._condition(input) ? true : false;
             }
         } catch (error) {
             throw EvalError(`Cannot run code under relation ${this._from.id} -> ${this._to.id}: ${error}`);

@@ -10,7 +10,7 @@ import { cloneDeep } from 'lodash';
      * Get value with key
      * @param key Parameter's key
      */
-    public get<T>(key: string): T {
+    public get<T = any>(key: string): T {
         return this.storage[key];
     }
 
