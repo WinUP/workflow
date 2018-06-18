@@ -2,8 +2,6 @@ var workflow = require('../dist');
 
 workflow.WorkflowManager.defaultActivator = type => LogProducer;
 
-workflow.WorkflowManager.fromDefinitions([]);
-
 var manager = new workflow.WorkflowManager();
 
 class LogProducer extends workflow.Producer {
