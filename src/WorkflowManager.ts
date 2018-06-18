@@ -1,10 +1,12 @@
 import { WorkflowDefinition, RelationDefinition } from './Definition';
+import { WorkflowEventArgs } from './WorkflowEventArgs';
+import { ProducerActivator } from './ProducerActivator';
+import { WorkflowResult } from './WorkflowResult';
 import { ProduceResult } from './ProduceResult';
 import { asPromise } from './Utilities';
 import { Producer } from './Producer';
 import { Relation } from './Relation';
 import * as Errors from './errors';
-import { WorkflowEventArgs } from './WorkflowEventArgs';
 
 /**
  * Workflow manager handles one workflow's status and may also stores workflow definition or just user other
@@ -86,13 +88,24 @@ export class WorkflowManager {
     }
 
     /**
-     * Load workflow fronm definitions
-     * @param activator A function that using given type string and return an instance of ```Producer```
-     * or ```null``` (if cannot instancing ```Producer```)
+     * Default avtivator when no activator given in ```fromDefinitions```
+     */
+    public static defaultActivator: ProducerActivator | undefined = undefined;
+
+    /**
+     * Load workflow from definition by using default activator
      * @param definitions All workflow definitions
      */
-    public static fromDefinitions(activator: (type: string) => ((new (id?: string) => Producer) | null),
-        ...definitions: WorkflowDefinition[]): WorkflowManager {
+    public static fromDefinitions(...definitions: WorkflowDefinition[]): WorkflowManager;
+    /**
+     * Load workflow from definitions
+     * @param activator A function that using given type string and return an instance of ```Producer```
+     * or ```undefined``` (if cannot instancing ```Producer```)
+     * @param definitions All workflow definitions
+     */
+    public static fromDefinitions(activator: ProducerActivator, ...definitions: WorkflowDefinition[]): WorkflowManager;
+    public static fromDefinitions(...params: (WorkflowDefinition | ProducerActivator)[]): WorkflowManager {
+        const { activator, definitions } = WorkflowManager.getDefinition(params);
         const producers: Producer[] = [];
         const relations: RelationDefinition[] = [];
         let entranceId: string | undefined;
@@ -230,7 +243,7 @@ export class WorkflowManager {
      * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
      * useful, typically it can highly reduce memory usage.
      */
-    public async run<T, U = T>(input: T, env: { [key: string]: any } = {}): Promise<{ data: ProduceResult<U>[], finished: boolean }> {
+    public async run<T, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<WorkflowResult> {
         if (this._entrance == null) {
             throw new Errors.UnavailableError('Cannot run workflow: No entrance point');
         }
@@ -249,7 +262,7 @@ export class WorkflowManager {
         args.dataPool = dataPool;
         args.finished = finished;
         args.skipped = skipped;
-        args.environment = env;
+        args.environment = env || {};
         this._isRunning = true;
         while (running.length > 0) {
             const nextRound: (ProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
@@ -379,5 +392,25 @@ export class WorkflowManager {
                 this.skipProducer(child.to, skipped);
             }
         });
+    }
+
+    private static getDefinition(definitions: (WorkflowDefinition | ProducerActivator)[])
+        : { activator: ProducerActivator, definitions: WorkflowDefinition[] } {
+        if (definitions.length < 1) {
+            throw new TypeError(`Cannot create workflow: Must have at least one definition`);
+        }
+        if (typeof definitions[0] === 'function') {
+            const activator: ProducerActivator = definitions[0] as ProducerActivator;
+            definitions.splice(0, 1);
+            if (definitions.length < 1) {
+                throw new TypeError(`Cannot create workflow: Must have at least one definition`);
+            }
+            return { activator: activator, definitions: definitions as WorkflowDefinition[] };
+        } else {
+            if (!this.defaultActivator) {
+                throw new TypeError(`Cannot create workflow: No activator or default activator provided`);
+            }
+            return { activator: this.defaultActivator, definitions: definitions as WorkflowDefinition[] };
+        }
     }
 }
