@@ -4,8 +4,8 @@ import { Producer } from './Producer';
 /**
  * Event arguments for running workflow
  */
-export class WorkflowEventArgs {
-    /**
+export class WorkflowEventArgs<TENV extends { [key: string]: any } = { [key: string]: any }> {
+    /**}
      * Should stop workflow after this producer
      */
     public cancelled: boolean = false;
@@ -24,5 +24,5 @@ export class WorkflowEventArgs {
     /**
      * Environment parameters
      */
-    public environment: { [key: string]: any } = {};
+    public environment: TENV = {} as TENV;
 }
