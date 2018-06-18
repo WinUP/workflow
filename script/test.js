@@ -16,9 +16,9 @@ class LogProducer extends workflow.Producer {
         };
     }
 
-    produce(input, params) {
+    produce(input, params, args) {
         const content = params.get('log');
-        console.log(this.id + ': ' + content);
+        console.log(args.finished);
         return input;
     }
 }

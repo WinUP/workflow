@@ -3,6 +3,7 @@ import { ParameterDescriptor } from './Parameter';
 import { ParameterTable } from './ParamaterTable';
 import { Relation } from './Relation';
 import * as UUID from 'uuid';
+import { WorkflowEventArgs } from './WorkflowEventArgs';
 
 /**
  * Workflow producer
@@ -141,14 +142,14 @@ export abstract class Producer {
      * Run this producer
      * @param input Input data
      */
-    public prepareExecute(input: any[], params: { [key: string]: any }): any[] | Promise<any[]> {
+    public prepareExecute(input: any[], params: { [key: string]: any }, args: WorkflowEventArgs): any[] | Promise<any[]> {
         const keys = Object.keys(params);
         if (keys.length === 0) {
-            return this.produce(input, this.parameters);
+            return this.produce(input, this.parameters, args);
         } else {
             const activeParameters = this.parameters.clone();
             activeParameters.patch(this.checkParameters(params));
-            const output = this.produce(input, activeParameters);
+            const output = this.produce(input, activeParameters, args);
             return output;
         }
     }
@@ -171,7 +172,7 @@ export abstract class Producer {
      */
     public abstract parameterStructure(): ParameterDescriptor;
 
-    public abstract produce(input: any[], params: ParameterTable): any[] | Promise<any[]>;
+    public abstract produce(input: any[], params: ParameterTable, args: WorkflowEventArgs): any[] | Promise<any[]>;
 
     private static parseParams(params: { [key: string]: any }): { [key: string]: any } {
         if (isSpecialParameter(params)) {

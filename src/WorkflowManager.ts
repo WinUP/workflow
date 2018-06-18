@@ -4,6 +4,7 @@ import { asPromise } from './Utilities';
 import { Producer } from './Producer';
 import { Relation } from './Relation';
 import * as Errors from './errors';
+import { WorkflowEventArgs } from './WorkflowEventArgs';
 
 /**
  * Workflow manager handles one workflow's status and may also stores workflow definition or just user other
@@ -243,6 +244,10 @@ export class WorkflowManager {
         const skipped: Producer[] = []; // 需要被跳过的处理器
         const dataPool: ProduceResult<any>[] = []; // 每个处理器的结果
         const needClean: Producer[] = []; // 待清理的处理器
+        const args = new WorkflowEventArgs(); // 工作流参数
+        args.dataPool = dataPool;
+        args.finished = finished;
+        args.skipped = skipped;
         this._isRunning = true;
         while (running.length > 0) {
             const nextRound: (ProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
@@ -261,7 +266,7 @@ export class WorkflowManager {
                 // 仅执行：目标节点不在下一轮执行队列中，目标节点满足执行前提
                 if (!nextRound.some(r => r.producer === runner.producer) && runner.producer.fitCondition(finished, skipped)) {
                     let error: Error | null = null;
-                    const data: any[] = await asPromise<any[]>(runner.producer.prepareExecute(runner.data, runner.inject))
+                    const data: any[] = await asPromise<any[]>(runner.producer.prepareExecute(runner.data, runner.inject, args))
                         .catch(e => error = e);
                     if (error) { throw error; }
                     finished.push(runner.producer); // 标记执行完成
@@ -274,6 +279,9 @@ export class WorkflowManager {
                         dataPool.splice(0, dataPool.length - 2);
                         running = [];
                         break;
+                    }
+                    if (args.cancelled) { // 如果被取消
+                        this.stop();
                     }
                     // 处理所有子节点
                     for (let j = -1; ++j < runner.producer.children.length;) {

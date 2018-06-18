@@ -17,9 +17,9 @@ with features:
 
 ![](https://raw.githubusercontent.com/WinUP/workflow/master/docs/sequence.png)
 
-For example, in this case, run sequence should be 1 -> 2-1 -> 3 -> 2-2 -> 4 automatically.
+For example, in this case, run sequence should be ROOT -> 1 -> 2-1 -> 3 -> 2-2 -> 4.
 
-### How to use
+## How to use
 
 ```bash
 npm install @ekifvk/workflow
@@ -66,7 +66,7 @@ if (manager.unreachableNodes.length > 0) { // Check if workflow's DAG has unreac
 }
 ```
 
-### Stop, pause and resume
+## Stop, pause and resume
 
 Workflow cannot pause/stop current running producer, but it can pause/stop before process next producer.
 
@@ -84,16 +84,18 @@ manager.stop().then(() => {
 });
 ```
 
-### How to write producer
+## How to write producer
 
 All producers must extend Producer, which is an abstract class, they can have these function implementations:
 
 ```typescript
 public abstract introduce(): string;
 public abstract parameterStructure(): ParameterDescriptor;
-public abstract produce(input: any[], params: ParameterTable): any[] | Promise<any[]>;
+public abstract produce(input: any[], params: ParameterTable, args: WorkflowEventArgs): any[] | Promise<any[]>;
 protected checkParameters(params: { [key: string]: any }): { [key: string]: any };
 ```
+
+Remember all producers are in multi-input (input is array) multi-output (output should be array or array inside promise) mode.
 
 The checkParameters function should check the parameter's type and change them if needed. The introduce function should return producer's description. The parameterStructure function should return a list of Parameter which defined initialize's parameter structure (still it has no use). The _produce function should produce the data and return new data.
 
@@ -103,6 +105,15 @@ Producer should use ```params.get(/* name */)``` to get parameter in purpose to 
 
 ```typescript
 return input + params.get<number>('number1');
+```
+
+Producer can also access workflow's current state by using third parameter ```args```, like cancel current workflow:
+```typescript
+args.cancelled = true
+```
+Or find other producer's state:
+```typescript
+const isOtherFinished = args.finished.includes('Other ID')
 ```
 
 For example, a producer that returns { key, value } pairs of any object can be like this:
@@ -117,7 +128,7 @@ export class KeyValuePairProducer extends Producer {
         return {}; // No parameter
     }
 
-    public produce(input: any[], params: ParameterTable): any[] | Promise<any[]> {
+    public produce(input: any[], params: ParameterTable, args: WorkflowEventArgs): any[] | Promise<any[]> {
         const result: any[] = [];
         input.forEach(data => { // Map the data
             const keys = Object.keys(data).forEach(key => {
@@ -129,15 +140,15 @@ export class KeyValuePairProducer extends Producer {
 }
 ```
 
-### Pre-defined producers
+## Pre-defined producers
 
 Under '@ekifvk/workflow/dist/producers'.
 
-#### Empty producer
+### Empty producer
 
 Producer that does nothing.
 
-#### Wrap producer
+### Wrap producer
 
 This producer can create a temporary producer using given code.
 
@@ -152,7 +163,7 @@ wrap.initialize({
 });
 ```
 
-#### Data pick producer / Structured data pick producer
+### Data pick producer / Structured data pick producer
 
 Pick data from json object or array, see [JPQuery](https://www.npmjs.com/package/@ekifvk/jpquery)'s document for more information.
 
@@ -172,7 +183,7 @@ picker2.initialize({
 });
 ```
 
-#### Value convert producer
+### Value convert producer
 
 Use given structure to focus on input data\'s specific places, then using rules to convert the value. See this producer's parameterStructure() for more information.
 
@@ -191,7 +202,7 @@ converter.initialize({
 });
 ```
 
-### Static workflow definition
+## Static workflow definition
 
 A JSON object can be created to define a workflow or part of workflow:
 
@@ -241,7 +252,7 @@ WorkflowManager.fromDefinitions(type => {
 }, ...someDefinitions);
 ```
 
-### Example
+## Example
 
 ```javascript
 var workflow = require('@ekifvk/workflow');
