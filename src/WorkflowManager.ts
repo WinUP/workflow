@@ -235,6 +235,19 @@ export class WorkflowManager {
     }
 
     /**
+     * Run this workflow and pack import as array
+     * @param input Input data
+     * @param env Environment parameters, default is empty object
+     * @returns An array contains each ```Producer```'s result if no output set, regurally last one is the last ```Producer```'s result.
+     * If ```this.output``` is not null, this array will only contains ```this.output```'s result.
+     * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
+     * useful, typically it can highly reduce memory usage.
+     */
+    public async runWithAutopack<T, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<WorkflowResult> {
+        return this.run([input], env);
+    }
+
+    /**
      * Run this workflow
      * @param input Input data
      * @param env Environment parameters, default is empty object
@@ -243,15 +256,15 @@ export class WorkflowManager {
      * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
      * useful, typically it can highly reduce memory usage.
      */
-    public async run<T, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<WorkflowResult> {
+    public async run<T extends Array<any>, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<WorkflowResult> {
         if (this._entrance == null) {
             throw new Errors.UnavailableError('Cannot run workflow: No entrance point');
         }
         if (this._isRunning) {
             throw new Errors.ConflictError('Workflow is already running');
         }
-        let running: (ProduceResult<any[]> & { inject: { [key: string]: any } })[]
-            = [{ producer: this._entrance, data: [input], inject: {} }]; // 需要被执行的处理器
+        let running: (ProduceResult & { inject: { [key: string]: any } })[]
+            = [{ producer: this._entrance, data: input, inject: {} }]; // 需要被执行的处理器
         this._finishedNodes = [];
         this._skippedNodes = [];
         const finished: Producer[] = []; // 已执行完成的处理器

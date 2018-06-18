@@ -59,9 +59,11 @@ manager.output = b; // Optional. Set output will only return output's result for
 if (manager.unreachableNodes.length > 0) { // Check if workflow's DAG has unreachable nodes.
     throw new TypeError(`Has unreachable node!`);
 } else {
-    manager.run(/* input data */, /* Optional environment parameter */).then(...).catch(...);
+    manager.run(/* input array */, /* Optional environment parameter */).then(...).catch(...);
+    // e.g.
+    manager.run([0]); // or manager.runWithAutopack(0) shortcut for single input situation
 
-    // Way to receive any producer's data
+    // Way to receive any producer's data, not required
     manager.resultObserver = data => ...;
 }
 ```
