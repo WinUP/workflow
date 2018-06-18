@@ -21,4 +21,8 @@ export class WorkflowEventArgs {
      * Skipped producers (producer that has no apposite input data or skipped by relation)
      */
     public skipped: Readonly<Producer[]> = [];
+    /**
+     * Environment parameters
+     */
+    public environment: { [key: string]: any } = {};
 }

@@ -59,7 +59,7 @@ manager.output = b; // Optional. Set output will only return output's result for
 if (manager.unreachableNodes.length > 0) { // Check if workflow's DAG has unreachable nodes.
     throw new TypeError(`Has unreachable node!`);
 } else {
-    manager.run(/* input data */).then(...).catch(...);
+    manager.run(/* input data */, /* Optional environment parameter */).then(...).catch(...);
 
     // Way to receive any producer's data
     manager.resultObserver = data => ...;
@@ -108,12 +108,20 @@ return input + params.get<number>('number1');
 ```
 
 Producer can also access workflow's current state by using third parameter ```args```, like cancel current workflow:
+
 ```typescript
 args.cancelled = true
 ```
 Or find other producer's state:
+
 ```typescript
 const isOtherFinished = args.finished.includes('Other ID')
+```
+
+Or access environment parameters (if have):
+
+```typescript
+const skip = args.environment.skip;
 ```
 
 For example, a producer that returns { key, value } pairs of any object can be like this:

@@ -18,7 +18,7 @@ class LogProducer extends workflow.Producer {
 
     produce(input, params, args) {
         const content = params.get('log');
-        console.log(args.finished);
+        console.log(args.environment);
         return input;
     }
 }
@@ -52,6 +52,6 @@ workflow.Relation.create(test5, test6);
 
 manager.entrance = entrance;
 manager.output = test6
-manager.run(0)
+manager.run(0, { test: 1 })
     .then(async v => console.log({ producer: v.data, data: JSON.stringify(v.data[0].data) }))
     .catch(async e => console.log(e));

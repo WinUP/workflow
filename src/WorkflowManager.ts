@@ -224,12 +224,13 @@ export class WorkflowManager {
     /**
      * Run this workflow
      * @param input Input data
+     * @param env Environment parameters, default is empty object
      * @returns An array contains each ```Producer```'s result if no output set, regurally last one is the last ```Producer```'s result.
      * If ```this.output``` is not null, this array will only contains ```this.output```'s result.
      * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
      * useful, typically it can highly reduce memory usage.
      */
-    public async run<T, U = T>(input: T): Promise<{ data: ProduceResult<U>[], finished: boolean }> {
+    public async run<T, U = T>(input: T, env: { [key: string]: any } = {}): Promise<{ data: ProduceResult<U>[], finished: boolean }> {
         if (this._entrance == null) {
             throw new Errors.UnavailableError('Cannot run workflow: No entrance point');
         }
@@ -248,6 +249,7 @@ export class WorkflowManager {
         args.dataPool = dataPool;
         args.finished = finished;
         args.skipped = skipped;
+        args.environment = env;
         this._isRunning = true;
         while (running.length > 0) {
             const nextRound: (ProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
