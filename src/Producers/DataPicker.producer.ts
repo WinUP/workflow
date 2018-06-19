@@ -1,4 +1,4 @@
-import { ParameterDescriptor, ParameterType } from '../Parameter';
+import { IParameterDescriptor, ParameterType } from '../Parameter';
 import { ParameterTable } from '../ParamaterTable';
 import { Producer } from '../Producer';
 import * as JPQuery from '@ekifvk/jpquery';
@@ -22,7 +22,7 @@ export class DataPickerProducer extends Producer {
             'Example: "/data1" -> (input.data1 or each element\'s data1 field if input is array)';
     }
 
-    public parameterStructure(): ParameterDescriptor {
+    public parameterStructure(): IParameterDescriptor {
         return {
             query: {
                 type: ParameterType.String,
@@ -32,8 +32,8 @@ export class DataPickerProducer extends Producer {
         };
     }
 
-    public produce(input: any[], activeParams: ParameterTable): any[] {
-        const query = activeParams.get<JPQuery.AnalyzerUnit[]>('query');
+    public produce(input: any[], params: ParameterTable): any[] {
+        const query = params.get<JPQuery.AnalyzerUnit[]>('query');
         if (!query) {
             throw new TypeError(`Data picker ${this.id}: No query string`);
         }

@@ -1,7 +1,7 @@
 /**
  * Parameter information
  */
-export interface Parameter {
+export interface IParameter {
     /**
      * Type, see ParameterType for more information
      */
@@ -9,11 +9,15 @@ export interface Parameter {
     /**
      * Subparameter (in object)
      */
-    properties?: ParameterDescriptor;
+    properties?: IParameterDescriptor;
     /**
      * Subparameter (in array)
      */
-    items?: Parameter[];
+    items?: IParameter[];
+    /**
+     * Function definition in TypeScript
+     */
+    functionType?: string;
     /**
      * Is optional
      */
@@ -31,8 +35,8 @@ export interface Parameter {
 /**
  * Parameter descriptor
  */
-export interface ParameterDescriptor {
-    [key: string]: Parameter;
+export interface IParameterDescriptor {
+    [key: string]: IParameter;
 }
 
 /**

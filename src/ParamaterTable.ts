@@ -1,4 +1,4 @@
-import { cloneDeep } from 'lodash';
+import { clone } from 'lodash';
 
 /**
  * A dictionary that stores parameters as key-value pair
@@ -60,11 +60,11 @@ import { cloneDeep } from 'lodash';
     }
 
     /**
-     * Create a deep cloned instance of this parameter table
+     * Create a shallow cloned instance of this parameter table
      */
     public clone(): ParameterTable {
         const result = new ParameterTable();
-        result.use(cloneDeep(this.storage));
+        result.use(clone(this.storage));
         return result;
     }
 }

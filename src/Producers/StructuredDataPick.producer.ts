@@ -1,4 +1,4 @@
-import { ParameterDescriptor, ParameterType } from '../Parameter';
+import { IParameterDescriptor, ParameterType } from '../Parameter';
 import { ParameterTable } from '../ParamaterTable';
 import { Producer } from '../Producer';
 import * as JPQuery from '@ekifvk/jpquery';
@@ -14,7 +14,7 @@ export class StructuredDataPickProducer extends Producer {
             'Example: { a: "/data1", b: [ "/data2", "/data3" ] } -> { a: data1, b: [ data2, data3 ] }';
     }
 
-    public parameterStructure(): ParameterDescriptor {
+    public parameterStructure(): IParameterDescriptor {
         return {
             query: {
                 type: ParameterType.Array | ParameterType.Object,
@@ -33,7 +33,7 @@ export class StructuredDataPickProducer extends Producer {
         return input.map(data => StructuredDataPickProducer.pickData(query, data));
     }
 
-    private static pickData(input: any, source: any): any {
+    protected static pickData(input: any, source: any): any {
         if (input instanceof Array) {
             return input.map(v => this.pickData(v, source));
         } else if (input == null) {

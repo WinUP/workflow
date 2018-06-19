@@ -1,8 +1,8 @@
-import { WorkflowDefinition, RelationDefinition } from './Definition';
-import { WorkflowEventArgs } from './WorkflowEventArgs';
+import { IWorkflow, IRelation } from './Definition';
 import { ProducerActivator } from './ProducerActivator';
-import { WorkflowResult } from './WorkflowResult';
-import { ProduceResult } from './ProduceResult';
+import { WorkflowContext } from './WorkflowContext';
+import { IWorkflowResult } from './IWorkflowResult';
+import { IProduceResult } from './ProduceResult';
 import { asPromise } from './Utilities';
 import { Producer } from './Producer';
 import { Relation } from './Relation';
@@ -26,7 +26,7 @@ export class WorkflowManager {
     /**
      * If this field is not undefined, workflow manager will send each producer's result after their running
      */
-    public resultObserver: ((result: ProduceResult<any>) => void) | undefined;
+    public resultObserver: ((result: IProduceResult<any>) => void) | undefined;
 
     /**
      * Workflow's entrance producer. When call ```run()``` function, this should be the first one to execute.
@@ -96,18 +96,18 @@ export class WorkflowManager {
      * Load workflow from definition by using default activator
      * @param definitions All workflow definitions
      */
-    public static fromDefinitions(...definitions: WorkflowDefinition[]): WorkflowManager;
+    public static fromDefinitions(...definitions: IWorkflow[]): WorkflowManager;
     /**
      * Load workflow from definitions
      * @param activator A function that using given type string and return an instance of ```Producer```
      * or ```undefined``` (if cannot instancing ```Producer```)
      * @param definitions All workflow definitions
      */
-    public static fromDefinitions(activator: ProducerActivator, ...definitions: WorkflowDefinition[]): WorkflowManager;
-    public static fromDefinitions(...params: (WorkflowDefinition | ProducerActivator)[]): WorkflowManager {
+    public static fromDefinitions(activator: ProducerActivator, ...definitions: IWorkflow[]): WorkflowManager;
+    public static fromDefinitions(...params: (IWorkflow | ProducerActivator)[]): WorkflowManager {
         const { activator, definitions } = WorkflowManager.getDefinition(params);
         const producers: Producer[] = [];
-        const relations: RelationDefinition[] = [];
+        const relations: IRelation[] = [];
         let entranceId: string | undefined;
         let outputId: string | undefined;
         definitions.forEach(definition => {
@@ -243,7 +243,7 @@ export class WorkflowManager {
      * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
      * useful, typically it can highly reduce memory usage.
      */
-    public async runWithAutopack<T, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<WorkflowResult> {
+    public async runWithAutopack<T, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<IWorkflowResult> {
         return this.run([input], env);
     }
 
@@ -256,29 +256,29 @@ export class WorkflowManager {
      * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
      * useful, typically it can highly reduce memory usage.
      */
-    public async run<T extends Array<any>, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<WorkflowResult> {
+    public async run<T extends Array<any>, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<IWorkflowResult> {
         if (this._entrance == null) {
-            throw new Errors.UnavailableError('Cannot run workflow: No entrance point');
+            throw new Errors.UnavailableError('Workflow has no entrance point');
         }
         if (this._isRunning) {
             throw new Errors.ConflictError('Workflow is already running');
         }
-        let running: (ProduceResult & { inject: { [key: string]: any } })[]
+        let running: (IProduceResult & { inject: { [key: string]: any } })[]
             = [{ producer: this._entrance, data: input, inject: {} }]; // 需要被执行的处理器
         this._finishedNodes = [];
         this._skippedNodes = [];
         const finished: Producer[] = []; // 已执行完成的处理器
         const skipped: Producer[] = []; // 需要被跳过的处理器
-        const dataPool: ProduceResult<any>[] = []; // 每个处理器的结果
+        const dataPool: IProduceResult<any>[] = []; // 每个处理器的结果
         const needClean: Producer[] = []; // 待清理的处理器
-        const args = new WorkflowEventArgs(); // 工作流参数
-        args.dataPool = dataPool;
-        args.finished = finished;
-        args.skipped = skipped;
-        args.environment = env || {};
+        const context = new WorkflowContext(); // 工作流参数
+        context.dataPool = dataPool;
+        context.finished = finished;
+        context.skipped = skipped;
+        context.environment = env || {};
         this._isRunning = true;
         while (running.length > 0) {
-            const nextRound: (ProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
+            const nextRound: (IProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
             for (let i = -1; ++i < running.length;) {
                 if (this.pauseInjector) { // 在每个循环开始时处理暂停
                     this.pauseInjector();
@@ -294,7 +294,7 @@ export class WorkflowManager {
                 // 仅执行：目标节点不在下一轮执行队列中，目标节点满足执行前提
                 if (!nextRound.some(r => r.producer === runner.producer) && runner.producer.fitCondition(finished, skipped)) {
                     let error: Error | null = null;
-                    const data: any[] = await asPromise<any[]>(runner.producer.prepareExecute(runner.data, runner.inject, args))
+                    const data: any[] = await asPromise<any[]>(runner.producer.prepareExecute(runner.data, runner.inject, context))
                         .catch(e => error = e);
                     if (error) { throw error; }
                     finished.push(runner.producer); // 标记执行完成
@@ -308,7 +308,7 @@ export class WorkflowManager {
                         running = [];
                         break;
                     }
-                    if (args.cancelled) { // 如果被取消
+                    if (context.cancelled) { // 如果被取消
                         this.stop();
                     }
                     // 处理所有子节点
@@ -407,8 +407,8 @@ export class WorkflowManager {
         });
     }
 
-    private static getDefinition(definitions: (WorkflowDefinition | ProducerActivator)[])
-        : { activator: ProducerActivator, definitions: WorkflowDefinition[] } {
+    private static getDefinition(definitions: (IWorkflow | ProducerActivator)[])
+        : { activator: ProducerActivator, definitions: IWorkflow[] } {
         if (definitions.length < 1) {
             throw new TypeError(`Cannot create workflow: Must have at least one definition`);
         }
@@ -418,12 +418,12 @@ export class WorkflowManager {
             if (definitions.length < 1) {
                 throw new TypeError(`Cannot create workflow: Must have at least one definition`);
             }
-            return { activator: activator, definitions: definitions as WorkflowDefinition[] };
+            return { activator: activator, definitions: definitions as IWorkflow[] };
         } else {
             if (!this.defaultActivator) {
                 throw new TypeError(`Cannot create workflow: No activator or default activator provided`);
             }
-            return { activator: this.defaultActivator, definitions: definitions as WorkflowDefinition[] };
+            return { activator: this.defaultActivator, definitions: definitions as IWorkflow[] };
         }
     }
 }

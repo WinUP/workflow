@@ -1,4 +1,4 @@
-import { ParameterDescriptor } from '../Parameter';
+import { IParameterDescriptor } from '../Parameter';
 import { Producer } from '../Producer';
 
 /**
@@ -10,7 +10,7 @@ export class EmptyProducer extends Producer {
         return 'Producer that does nothing';
     }
 
-    public parameterStructure(): ParameterDescriptor {
+    public parameterStructure(): IParameterDescriptor {
         return { };
     }
 

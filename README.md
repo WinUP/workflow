@@ -92,8 +92,8 @@ All producers must extend Producer, which is an abstract class, they can have th
 
 ```typescript
 public abstract introduce(): string;
-public abstract parameterStructure(): ParameterDescriptor;
-public abstract produce(input: any[], params: ParameterTable, args: WorkflowEventArgs): any[] | Promise<any[]>;
+public abstract parameterStructure(): IParameterDescriptor;
+public abstract produce(input: any[], params: ParameterTable, context: WorkflowContext): any[] | Promise<any[]>;
 protected checkParameters(params: { [key: string]: any }): { [key: string]: any };
 ```
 
@@ -109,21 +109,21 @@ Producer should use ```params.get(/* name */)``` to get parameter in purpose to 
 return input + params.get<number>('number1');
 ```
 
-Producer can also access workflow's current state by using third parameter ```args```, like cancel current workflow:
+Producer can also access workflow's current state by using third parameter ```context```, like cancel current workflow:
 
 ```typescript
-args.cancelled = true
+context.cancelled = true
 ```
 Or find other producer's state:
 
 ```typescript
-const isOtherFinished = args.finished.includes('Other ID')
+const isOtherFinished = context.finished.includes('Other ID')
 ```
 
 Or access environment parameters (if have):
 
 ```typescript
-const skip = args.environment.skip;
+const skip = context.environment.skip;
 ```
 
 For example, a producer that returns { key, value } pairs of any object can be like this:
@@ -134,11 +134,11 @@ export class KeyValuePairProducer extends Producer {
         return 'Read input object\'s key and value and return { key: key, value: value } array';
     }
 
-    public parameterStructure(): ParameterDescriptor| null {
+    public parameterStructure(): IParameterDescriptor {
         return {}; // No parameter
     }
 
-    public produce(input: any[], params: ParameterTable, args: WorkflowEventArgs): any[] | Promise<any[]> {
+    public produce(input: any[], params: ParameterTable, context: WorkflowContext): any[] | Promise<any[]> {
         const result: any[] = [];
         input.forEach(data => { // Map the data
             const keys = Object.keys(data).forEach(key => {
@@ -208,6 +208,29 @@ converter.initialize({
         data1: {
             data2: [ { data3: true } ]
         }
+    }
+});
+```
+
+### Subworkflow producer / Circulate subworkflow producer
+
+Contains a fully functional workflow, use that workflow's result as producer's return data. The first one only run workflow once, while other one run workflow multiple times.
+
+```typescript
+const circulate = new CirculateSubWorkflowProducer();
+const subWorkflow = new WorkflowManager(); // Another workflow
+subWorkflow.entrance = new LogProducer('sub1'); // Enrance point
+circulate.initialize({
+    definition: subWorkflow, // Use that workflow
+    env: { skip: 0 }, // Environment
+    onResult: (input: IWorkflowResult[]) => { // Function that generate result
+        return input.map(v => v.data[0].data[0]);
+    },
+    onLoop: (env: { [key: string]: any }, context: WorkflowContext, output: IWorkflowResult) => {
+        // Change environment
+        env.skip++;
+        // While's condition. It will run loop two times.
+        return env.skip < 3;
     }
 });
 ```

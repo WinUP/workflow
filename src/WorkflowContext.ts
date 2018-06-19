@@ -1,10 +1,10 @@
-import { ProduceResult } from './ProduceResult';
+import { IProduceResult } from './ProduceResult';
 import { Producer } from './Producer';
 
 /**
  * Event arguments for running workflow
  */
-export class WorkflowEventArgs<TENV extends { [key: string]: any } = { [key: string]: any }> {
+export class WorkflowContext<TENV extends { [key: string]: any } = { [key: string]: any }> {
     /**}
      * Should stop workflow after this producer
      */
@@ -12,7 +12,7 @@ export class WorkflowEventArgs<TENV extends { [key: string]: any } = { [key: str
     /**
      * Current data pool
      */
-    public dataPool: Readonly<ProduceResult<any>[]> = [];
+    public dataPool: Readonly<IProduceResult<any>[]> = [];
     /**
      * Finished producers
      */

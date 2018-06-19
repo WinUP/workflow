@@ -1,12 +1,13 @@
-import { ParameterDescriptor, ParameterType } from '../Parameter';
+import { isEqual } from 'lodash';
+
+import { IParameterDescriptor, ParameterType } from '../Parameter';
 import { ParameterTable } from '../ParamaterTable';
 import { Producer } from '../Producer';
-import { isEqual } from 'lodash';
 
 /**
  * Value convert rule
  */
-export interface ValueConvertRule<T = any, U = any> {
+export interface IValueConvertRule<T = any, U = any> {
     /**
      * Is this the default rule (using when any other rules are not fit)
      */
@@ -29,7 +30,7 @@ export class ValueConvertProducer extends Producer {
         return 'Use given structure to focus on input data\'s specific places, then using rules to convert the value.';
     }
 
-    public parameterStructure(): ParameterDescriptor {
+    public parameterStructure(): IParameterDescriptor {
         return {
             rules: {
                 type: ParameterType.Array,
@@ -70,7 +71,7 @@ export class ValueConvertProducer extends Producer {
     }
 
     public produce(input: any[], params: ParameterTable): any[] | Promise<any[]> {
-        const rules = params.get<ValueConvertRule[]>('rules');
+        const rules = params.get<IValueConvertRule[]>('rules');
         const structure = params.get<{ [key: string]: object | boolean }>('structure');
         if (!rules || !structure) {
             throw new TypeError(`Value converter ${this.id}: No rules or structure definition`);
@@ -86,7 +87,7 @@ export class ValueConvertProducer extends Producer {
         }));
     }
 
-    private static async convert(structure: any, source: any, rules: ValueConvertRule[]): Promise<object | null | undefined> {
+    protected static async convert(structure: any, source: any, rules: IValueConvertRule[]): Promise<object | null | undefined> {
         // 空值转换
         if (source === null) {
             return ValueConvertProducer.pickValue(source, rules);
@@ -174,7 +175,7 @@ export class ValueConvertProducer extends Producer {
         return result;
     }
 
-    private static async pickValue(key: any, rules: ValueConvertRule[]): Promise<any> {
+    protected static async pickValue(key: any, rules: IValueConvertRule[]): Promise<any> {
         let pair = rules.find(r => typeof r.key === 'function' ? (r.key(key, this) ? true : false) : isEqual(r.key, key));
         if (!pair) {
             pair = rules.find(r => r.default === true);

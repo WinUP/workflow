@@ -1,15 +1,15 @@
 /**
  * Workflow definition
  */
-export interface WorkflowDefinition {
+export interface IWorkflow {
     /**
      * Producers
      */
-    producers?: ProducerDefinition[];
+    producers?: IProducer[];
     /**
      * Relations
      */
-    relations?: RelationDefinition[];
+    relations?: IRelation[];
     /**
      * Entrance producer
      */
@@ -23,7 +23,7 @@ export interface WorkflowDefinition {
 /**
  * Producer definition
  */
-export interface ProducerDefinition {
+export interface IProducer {
     /**
      * Type
      */
@@ -45,7 +45,7 @@ export interface ProducerDefinition {
 /**
  * Relation definition
  */
-export interface RelationDefinition {
+export interface IRelation {
     /**
      * Parent producer
      */
@@ -64,7 +64,7 @@ export interface RelationDefinition {
     condition?: string | null;
 }
 
-export interface SpecialParameter<T = any> {
+export interface ISpecialParameter<T = any> {
     type: SpecialParameterType;
     content: T;
 }
@@ -75,7 +75,7 @@ export enum SpecialParameterType {
 
 const parameterTypes = [SpecialParameterType.Eval];
 
-export function isSpecialParameter(input: any): input is SpecialParameter {
+export function isSpecialParameter(input: any): input is ISpecialParameter {
     if (typeof input !== 'object') {
         return false;
     }

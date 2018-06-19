@@ -3,7 +3,7 @@ import { Producer } from './Producer';
 /**
  * Producer's running result
  */
-export interface ProduceResult<T = any> {
+export interface IProduceResult<T = any> {
     /**
      * Target producer
      */

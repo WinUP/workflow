@@ -1,13 +1,13 @@
-import { ProduceResult } from './ProduceResult';
+import { IProduceResult } from './ProduceResult';
 
 /**
  * Running result for workflow
  */
-export interface WorkflowResult {
+export interface IWorkflowResult {
     /**
      * Producer's results
      */
-    data: ProduceResult<any>[];
+    data: IProduceResult<any>[];
     /**
      * Is workflow finished with no cancellation
      */

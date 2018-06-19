@@ -1,9 +1,10 @@
+import * as UUID from 'uuid';
+
 import { isSpecialParameter, SpecialParameterType } from './Definition';
-import { ParameterDescriptor } from './Parameter';
+import { IParameterDescriptor } from './Parameter';
+import { WorkflowContext } from './WorkflowContext';
 import { ParameterTable } from './ParamaterTable';
 import { Relation } from './Relation';
-import * as UUID from 'uuid';
-import { WorkflowEventArgs } from './WorkflowEventArgs';
 
 /**
  * Workflow producer
@@ -142,14 +143,14 @@ export abstract class Producer {
      * Run this producer
      * @param input Input data
      */
-    public prepareExecute(input: any[], params: { [key: string]: any }, args: WorkflowEventArgs): any[] | Promise<any[]> {
+    public prepareExecute(input: any[], params: { [key: string]: any }, context: WorkflowContext): any[] | Promise<any[]> {
         const keys = Object.keys(params);
         if (keys.length === 0) {
-            return this.produce(input, this.parameters, args);
+            return this.produce(input, this.parameters, context);
         } else {
             const activeParameters = this.parameters.clone();
             activeParameters.patch(this.checkParameters(params));
-            const output = this.produce(input, activeParameters, args);
+            const output = this.produce(input, activeParameters, context);
             return output;
         }
     }
@@ -170,29 +171,32 @@ export abstract class Producer {
     /**
      * Get producer's parameter description
      */
-    public abstract parameterStructure(): ParameterDescriptor;
+    public abstract parameterStructure(): IParameterDescriptor;
 
-    public abstract produce(input: any[], params: ParameterTable, args: WorkflowEventArgs): any[] | Promise<any[]>;
+    public abstract produce(input: any[], params: ParameterTable, context: WorkflowContext): any[] | Promise<any[]>;
 
     private static parseParams(params: { [key: string]: any }): { [key: string]: any } {
+        if (typeof params !== 'object' || params == null) {
+            return params;
+        }
         if (isSpecialParameter(params)) {
             if (params.type === SpecialParameterType.Eval) {
                 params = eval(params.content);
             }
         }
-        if (!(typeof params === 'object')) {
-            return params;
-        }
-        const result: { [key: string]: any } = {};
         Object.keys(params).forEach(key => {
             if (params[key] instanceof Array) {
-                result[key] = params[key].map((v: any) => Producer.parseParams(v));
-            } else if (typeof params[key] === 'object') {
-                result[key] = Producer.parseParams(params[key]);
-            } else {
-                result[key] = params[key];
+                params[key].forEach((v: any) => params[key] = Producer.parseParams(v));
+            } else if (typeof params[key] === 'object' && Object.getPrototypeOf(params[key].constructor) === Object) {
+                params[key] = Producer.parseParams(params[key]);
             }
         });
-        return result;
+        return params;
     }
 }
+
+class A { }
+const a = new A();
+
+
+const b = a.constructor;
