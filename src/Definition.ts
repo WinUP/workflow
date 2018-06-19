@@ -61,7 +61,7 @@ export interface IRelation {
     /**
      * Condition
      */
-    condition?: string | null;
+    condition?: string | null | ((input: any) => boolean);
 }
 
 export interface ISpecialParameter<T = any> {
