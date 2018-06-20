@@ -296,7 +296,10 @@ export class WorkflowManager {
                     let error: Error | null = null;
                     const data: any[] = await asPromise<any[]>(runner.producer.prepareExecute(runner.data, runner.inject, context))
                         .catch(e => error = e);
-                    if (error) { throw error; }
+                    if (error) {
+                        this._isRunning = false;
+                        throw error;
+                    }
                     finished.push(runner.producer); // 标记执行完成
                     if (this._output && runner.producer !== this._output) { needClean.push(runner.producer); } // 标记待清理
                     this._finishedNodes.push(runner.producer.id);
