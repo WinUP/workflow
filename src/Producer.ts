@@ -186,7 +186,9 @@ export abstract class Producer {
         }
         Object.keys(params).forEach(key => {
             if (params[key] instanceof Array) {
-                params[key].forEach((v: any) => params[key] = Producer.parseParams(v));
+                for (let i = -1; ++i < params[key].length;) {
+                    params[key][i] = Producer.parseParams(params[key][i]);
+                }
             } else if (typeof params[key] === 'object' && Object.getPrototypeOf(params[key].constructor) === Object) {
                 params[key] = Producer.parseParams(params[key]);
             }
@@ -194,9 +196,3 @@ export abstract class Producer {
         return params;
     }
 }
-
-class A { }
-const a = new A();
-
-
-const b = a.constructor;
