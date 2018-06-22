@@ -294,8 +294,15 @@ export class WorkflowManager {
                 // 仅执行：目标节点不在下一轮执行队列中，目标节点满足执行前提
                 if (!nextRound.some(r => r.producer === runner.producer) && runner.producer.fitCondition(finished, skipped)) {
                     let error: Error | null = null;
-                    const data: any[] = await asPromise<any[]>(runner.producer.prepareExecute(runner.data, runner.inject, context))
-                        .catch(e => error = e);
+                    let data: any[] | undefined;
+                    try {
+                        data = await asPromise<any[]>(runner.producer.prepareExecute(runner.data, runner.inject, context))
+                            .catch(e => error = e);
+                    } catch (e) {
+                        error = e;
+                    } finally {
+                        data = data || [];
+                    }
                     if (error) {
                         this._isRunning = false;
                         throw error;
