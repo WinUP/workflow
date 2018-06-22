@@ -125,7 +125,7 @@ export class WorkflowManager {
                         `Cannot set ${definition.output} as output point: Output had already set to ${outputId}`
                     );
                 }
-                outputId = definition.entrance;
+                outputId = definition.output;
             }
             if (definition.producers) {
                 definition.producers.forEach(producer => {

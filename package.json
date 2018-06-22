@@ -1,6 +1,6 @@
 {
   "name": "@ekifvk/workflow",
-  "version": "1.8.4",
+  "version": "1.8.5",
   "description": "Simple Workflow controller",
   "scripts": {
     "test": "node script/test.js",
