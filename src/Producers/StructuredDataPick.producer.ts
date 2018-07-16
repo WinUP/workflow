@@ -1,5 +1,6 @@
 import { IParameterDescriptor, ParameterType } from '../Parameter';
 import { ParameterTable } from '../ParamaterTable';
+import { ProducerError } from '../errors';
 import { Producer } from '../Producer';
 import * as JPQuery from '@ekifvk/jpquery';
 
@@ -28,7 +29,7 @@ export class StructuredDataPickProducer extends Producer {
     public produce(input: any[], params: ParameterTable): any[] {
         const query = params.get<JPQuery.AnalyzerUnit[]>('query');
         if (!query) {
-            throw new TypeError(`Data picker ${this.id}: No query structure`);
+            throw new ProducerError('StructuredDataPick', this.id,  'No query structure');
         }
         return input.map(data => StructuredDataPickProducer.pickData(query, data));
     }

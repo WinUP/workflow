@@ -3,6 +3,7 @@ import { SubWorkflowProducer } from './SubWorkflow.producer';
 import { WorkflowContext } from '../WorkflowContext';
 import { IWorkflowResult } from '../IWorkflowResult';
 import { ParameterTable } from '../ParamaterTable';
+import { ProducerError } from '../errors';
 
 export type CirculateSubWorkflowOnLoop =
     (env: { [key: string]: any }, context: WorkflowContext, output: IWorkflowResult | undefined) => boolean;
@@ -29,14 +30,14 @@ export class CirculateSubWorkflowProducer extends SubWorkflowProducer {
         const workflow = this.getWorkflow(params);
         const onLoop = params.get<CirculateSubWorkflowOnLoop | undefined>('onLoop');
         if (!onLoop) {
-            throw new TypeError(`SubWorkflow {${this.id}} No onLoop function`);
+            throw new ProducerError('CirculateSubWorkflow', this.id, 'No onLoop function');
         }
         const data: IWorkflowResult[] = [];
         let previousResult: IWorkflowResult | undefined;
         while (onLoop(environment, context, previousResult)) {
             const result = await workflow.run(input, environment).catch((e: Error) => e);
             if (result instanceof Error) {
-                throw new TypeError(`SubWorkflow {${this.id}} ${result}`);
+                throw new ProducerError('CirculateSubWorkflow', this.id, result);
             }
             previousResult = result;
             data.push(previousResult);

@@ -1,16 +1,17 @@
 import { IParameterDescriptor, ParameterType } from '../Parameter';
 import { ParameterTable } from '../ParamaterTable';
+import { ProducerError } from '../errors';
 import { Producer } from '../Producer';
 import * as JPQuery from '@ekifvk/jpquery';
 
 /**
  * Data picker producer
  */
-export class DataPickerProducer extends Producer {
+export class DataPickProducer extends Producer {
     protected checkParameters(params: { [key: string]: any }): { [key: string]: any } {
         if (params.query !== undefined) {
             if (typeof params.query !== 'string') {
-                throw new TypeError(`Data picker ${this.id}: Parameter 'query' must be string`);
+                throw new ProducerError('DataPick', this.id,  'Parameter "query" must be string');
             }
             params.query = JPQuery.analyse(params.query);
         }
@@ -35,7 +36,7 @@ export class DataPickerProducer extends Producer {
     public produce(input: any[], params: ParameterTable): any[] {
         const query = params.get<JPQuery.AnalyzerUnit[]>('query');
         if (!query) {
-            throw new TypeError(`Data picker ${this.id}: No query string`);
+            throw new ProducerError('DataPick', this.id,  'No query string');
         }
         return input.map(data => JPQuery.pick(data, query));
     }

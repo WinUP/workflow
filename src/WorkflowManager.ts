@@ -1,3 +1,4 @@
+import { ConflictError, UnavailableError, GeneratorError } from './errors';
 import { IWorkflow, IRelation } from './Definition';
 import { ProducerActivator } from './ProducerActivator';
 import { WorkflowContext } from './WorkflowContext';
@@ -6,7 +7,6 @@ import { IProduceResult } from './ProduceResult';
 import { asPromise } from './Utilities';
 import { Producer } from './Producer';
 import { Relation } from './Relation';
-import * as Errors from './errors';
 
 /**
  * Workflow manager handles one workflow's status and may also stores workflow definition or just user other
@@ -33,7 +33,7 @@ export class WorkflowManager {
      */
     public get entrance(): Producer | undefined {
         if (this._isRunning) {
-            throw new Errors.ConflictError('Workflow is running');
+            throw new ConflictError('Cannot set entrance when workflow is running');
         }
         return this._entrance;
     } public set entrance(value) {
@@ -45,7 +45,7 @@ export class WorkflowManager {
      */
     public get output(): Producer | undefined {
         if (this._isRunning) {
-            throw new Errors.ConflictError('Workflow is running');
+            throw new ConflictError('Cannot set output point when workflow is running');
         }
         return this._output;
     } public set output(value) {
@@ -113,28 +113,24 @@ export class WorkflowManager {
         definitions.forEach(definition => {
             if (definition.entrance) {
                 if (entranceId) {
-                    throw new Errors.ConflictError(
-                        `Cannot set ${definition.entrance} as entrance point: Entrance had already set to ${entranceId}`
-                    );
+                    throw new GeneratorError(`Cannot set ${definition.entrance} as entrance which had already set to ${entranceId}`);
                 }
                 entranceId = definition.entrance;
             }
             if (definition.output) {
                 if (outputId) {
-                    throw new Errors.ConflictError(
-                        `Cannot set ${definition.output} as output point: Output had already set to ${outputId}`
-                    );
+                    throw new GeneratorError(`Cannot set ${definition.output} as output point which had already set to ${outputId}`);
                 }
                 outputId = definition.output;
             }
             if (definition.producers) {
                 definition.producers.forEach(producer => {
                     if (producers.some(p => p.id === producer.id)) {
-                        throw new Errors.ConflictError(`Cannot add producer ${producer.id}: Id conflict`);
+                        throw new GeneratorError(`ID "${producer.id}" conflict`);
                     }
                     const instanceActivator = activator(producer.type);
                     if (!instanceActivator) {
-                        throw new TypeError(`Cannot declare producer ${producer.id}: Activator returns nothing`);
+                        throw new GeneratorError(`Activator for type "${producer.type}" (on "${producer.id}") returns nothing`);
                     }
                     const instance = new instanceActivator(producer.id);
                     instance.initialize(producer.parameters);
@@ -144,7 +140,7 @@ export class WorkflowManager {
             if (definition.relations) {
                 definition.relations.forEach(relation => {
                     if (relations.some(r => r.from === relation.from && r.to === relation.to)) {
-                        throw new Errors.ConflictError(`Cannot register relation: ${relation.from} -> ${relation.to} is already exist`);
+                        throw new GeneratorError(`Relation ${relation.from} -> ${relation.to} is already existed`);
                     }
                     relations.push(relation);
                 });
@@ -152,18 +148,16 @@ export class WorkflowManager {
         });
         const entrance = producers.find(p => p.id === entranceId);
         if (!entrance) {
-            throw new ReferenceError(`Cannot generate workflow: No entrance point (prefer id ${entranceId})`);
+            throw new GeneratorError(`No entrance point (prefer id ${entranceId})`);
         }
         relations.forEach(relation => {
             const from = producers.find(p => p.id === relation.from);
-            if (!from) {
-                throw new ReferenceError(
-                    `Cannot add relation ${relation.from} -> ${relation.to}: Parent with id ${relation.from} is not exist`);
-            }
             const to = producers.find(p => p.id === relation.to);
+            if (!from) {
+                throw new GeneratorError(`Relation ${relation.from} (nonexisted) -> ${relation.to} is not available`);
+            }
             if (!to) {
-                throw new ReferenceError(
-                    `Cannot add relation ${relation.from} -> ${relation.to}: Child with id ${relation.to} is not exist`);
+                throw new GeneratorError(`Relation ${relation.from} -> ${relation.to} (nonexisted) is not available`);
             }
             Relation.create(from, to, relation.inject, relation.condition || undefined);
         });
@@ -172,7 +166,7 @@ export class WorkflowManager {
         if (outputId) {
             const output = producers.find(p => p.id === outputId);
             if (!output) {
-                throw new ReferenceError(`Cannot generate workflow: Unexisted output point (prefer id ${outputId})`);
+                throw new GeneratorError(`Unexisted output point (prefer id ${outputId})`);
             }
             result.output = output;
         }
@@ -193,9 +187,9 @@ export class WorkflowManager {
                     this.resume();
                 }
             } else if (!this._isRunning) {
-                reject(new Errors.UnavailableError('Workflow is not running'));
+                reject(new UnavailableError('Workflow is not running'));
             } else {
-                reject(new Errors.ConflictError('Workflow is in stopping progress'));
+                reject(new ConflictError('Workflow is in stopping progress'));
             }
         });
     }
@@ -212,9 +206,9 @@ export class WorkflowManager {
                 this.pauseInjector = () => resolve();
                 this.pendingCallback = new Promise<void>(callback => { this.pendingTrigger = () => callback(); });
             } else if (!this._isRunning) {
-                reject(new Errors.UnavailableError('Workflow is not running'));
+                reject(new UnavailableError('Workflow is not running'));
             } else {
-                reject(new Errors.ConflictError('Workflow is in pausing progress'));
+                reject(new ConflictError('Workflow is in pausing progress'));
             }
         });
     }
@@ -228,9 +222,9 @@ export class WorkflowManager {
             this.pendingTrigger();
             this.pendingTrigger = undefined;
         } else if (!this._isRunning) {
-            throw new Errors.UnavailableError('Workflow is not running');
+            throw new UnavailableError('Workflow is not running');
         } else {
-            throw new Errors.UnavailableError('Workflow is not paused');
+            throw new UnavailableError('Workflow is not paused');
         }
     }
 
@@ -258,10 +252,10 @@ export class WorkflowManager {
      */
     public async run<T extends Array<any>, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<IWorkflowResult> {
         if (this._entrance == null) {
-            throw new Errors.UnavailableError('Workflow has no entrance point');
+            throw new UnavailableError('Workflow has no entrance point');
         }
         if (this._isRunning) {
-            throw new Errors.ConflictError('Workflow is already running');
+            throw new ConflictError('Workflow is already running');
         }
         let running: (IProduceResult & { inject: { [key: string]: any } })[]
             = [{ producer: this._entrance, data: input, inject: {} }]; // 需要被执行的处理器
@@ -420,18 +414,18 @@ export class WorkflowManager {
     private static getDefinition(definitions: (IWorkflow | ProducerActivator)[])
         : { activator: ProducerActivator, definitions: IWorkflow[] } {
         if (definitions.length < 1) {
-            throw new TypeError(`Cannot create workflow: Must have at least one definition`);
+            throw new GeneratorError(`Must have at least one definition`);
         }
         if (typeof definitions[0] === 'function') {
             const activator: ProducerActivator = definitions[0] as ProducerActivator;
             definitions.splice(0, 1);
             if (definitions.length < 1) {
-                throw new TypeError(`Cannot create workflow: Must have at least one definition`);
+                throw new GeneratorError(`Must have at least one definition`);
             }
             return { activator: activator, definitions: definitions as IWorkflow[] };
         } else {
             if (!this.defaultActivator) {
-                throw new TypeError(`Cannot create workflow: No activator or default activator provided`);
+                throw new GeneratorError(`No activator or default activator provided`);
             }
             return { activator: this.defaultActivator, definitions: definitions as IWorkflow[] };
         }

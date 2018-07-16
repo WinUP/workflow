@@ -6,6 +6,7 @@ import { WorkflowContext } from '../WorkflowContext';
 import { WorkflowManager } from '../WorkflowManager';
 import { IWorkflowResult } from '../IWorkflowResult';
 import { ParameterTable } from '../ParamaterTable';
+import { ProducerError } from '../errors';
 import { IWorkflow } from '../Definition';
 import { Producer } from '../Producer';
 
@@ -53,7 +54,7 @@ export class SubWorkflowProducer extends Producer {
         const workflow = this.getWorkflow(params);
         const result = await workflow.run(input, environment).catch((e: Error) => e);
         if (result instanceof Error) {
-            throw new TypeError(`SubWorkflow {${this.id}} ${result}`);
+            throw new ProducerError('SubWorkflow', this.id, result);
         }
         const onResult = SubWorkflowProducer.getOnResult(params);
         return onResult ? onResult([result]) : result.data[result.data.length - 1].data;
@@ -73,7 +74,7 @@ export class SubWorkflowProducer extends Producer {
     protected getWorkflow(params: ParameterTable): WorkflowManager {
         let workflow = params.get<WorkflowManager | IWorkflow[] | undefined>('definition');
         if (workflow instanceof WorkflowManager) { return workflow; }
-        if (!workflow) { throw new TypeError(`SubWorkflow {${this.id}} No definition provided`); }
+        if (!workflow) { throw new ProducerError('SubWorkflow', this.id, 'No definition provided'); }
         const activator = params.get<ProducerActivator | undefined>('activator');
         if (activator) {
             workflow = WorkflowManager.fromDefinitions(activator, ...workflow);

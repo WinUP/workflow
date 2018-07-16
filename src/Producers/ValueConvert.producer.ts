@@ -2,6 +2,7 @@ import { isEqual } from 'lodash';
 
 import { IParameterDescriptor, ParameterType } from '../Parameter';
 import { ParameterTable } from '../ParamaterTable';
+import { ProducerError } from '../errors';
 import { Producer } from '../Producer';
 
 /**
@@ -74,7 +75,7 @@ export class ValueConvertProducer extends Producer {
         const rules = params.get<IValueConvertRule[]>('rules');
         const structure = params.get<{ [key: string]: object | boolean }>('structure');
         if (!rules || !structure) {
-            throw new TypeError(`Value converter ${this.id}: No rules or structure definition`);
+            throw new ProducerError('ValueConvert', this.id, 'No rules or structure definition');
         }
         return Promise.all(input.map(data => {
             if (data == null) {
