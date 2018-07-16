@@ -1,16 +1,16 @@
 language: node_js
 node_js:
-  - '10'
+- '10'
 install: npm install
 script:
-  - npm run tsc
-  - npm run test
-  - npm run copyProducer
+- npm run tsc
+- npm run test
+- npm run copyProducer
 deploy:
   provider: npm
   email: l.gholoi@outlook.com
   api_key:
-    secure: jJJ4sdk7xEXuVUuI4jNBYU+/qBHnpgUev++8WwMgBiUZjoe5em5TQMF9p7WdrolR4L/BvdTGW+V+G+MwPoM6e3FSxAS/zjtl6O1QtHERA1krF7fKKlgkUqfsRLHgmXVV5hCFxxbYeOQTOuj4G0+onil5DPI3EGhA9v9EoiPUOZ/DyESKOR9RpFqy7d0Pw8Aw/69/sOsW7FIYb0SjrKOeSk1FN/F1RwJc5WWTBY4Vevq+5DkhzkdDX4XoZB9eFmL+oAZ/GHEqos/B3thKu6aNZXfwzGNVIi+ae2M4DMd0IpTiG9cWxPxvaKod4SXVBLvNL0QSsnDX9jZVRGVtVbNVGUh39oRrsSwB/VKXssnujsfEGtXk9HN0phPHTZODnfvm0Onxk0YBq28KPSNFaXQFC7eQKxAk4OBi6+JaNFMD/B+1iJifitynXKJ8fmLjbSw4wntjfrkG9ujhskN05PlVNGoLGRFayCi2SSvv5WfWuAtXfj/huHY+W1ehZWfMt33DOh/fSquvxOvY9pzEkxprtsnyOto3vOFeDEcduGbpCk68drrFD0FiPQLEOZDxYP46GlZBkOj5R/nNZQhT2OIsmDic05OiRfK1hX+L2lUzNdjfCa0Hd0eaxOMgDHf3YX0KTCbJt6O0kIu7gHU4OfN0XaHBJCavesLzu4asqf3vugg=
+    secure: YVOldx1EWTzkHxrssL8YdaOD7i5JCS9cCWPNeyhy7hGal7COg5TGOmCK53HoBkfebzQGkDKCaHNGPsguqiH+TUs8ckv8WiHGYRKvWMgYIk6rKtHGnnU8+MGhPCHIjhylM+wSpjk9WfSxrGjpG6nMaURG1MES+f1Etrs0JqOMkcc5RrWlPe8tHtvf+7RU28RTfukeZYkC8kcxG+ENvg21pQV0EGAN9G/wa2EynD26/UMhZoqoINXP2HDoW16NW2JV+8E4OS4e2iRxHjvWy+j9lMgayejtm1I3h7TjzkuwmIiDCiqWqqz2nAJcpkTKDp7Zs8ztMNZ+9lDY/5Gs3syI4PLENKWEDxpL3Pu+bWku4GDCJ5dcbc6KGXR/HMRgAdZGKF8e6JUdkYn7XIwCAVVE2yRJKSlhMSUnhKDgO6DB0QEJqI/bVyG0lX5IIeC2uiDdy57ul3dugn97XquMGcUpwZ/m1JJAYaAAt4hhz/XWLraJSCs4rIp5eCmKDAonscb1+cA7rnuFZX6g3nluZ1MG6FssOTiVaGW8MwpE3HJnsIOVGXiyBsjWKSo3fnl+dNAVhkzemxjNK2ffJPTKQQYv04xy8ZTliWsh6eKOh81hLoE6FuNVXwAmLN7NRB4jI7wgl7T5cpv9avfAOnG08AVrx+bGa9DIiXRycZtAMmttLQ0=
   on:
     tags: true
     branch: master
