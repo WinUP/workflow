@@ -70,6 +70,10 @@ export interface IRelation {
      * Condition
      */
     condition?: string | null | ((input: any) => boolean);
+    /**
+     * Allow empty (empty array) data transfers to relation's target, otherwise target will be disabled on this situation
+     */
+    allowEmptyInput?: boolean;
 }
 
 export interface ISpecialParameter<T = any> {

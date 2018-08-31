@@ -50,9 +50,12 @@ export class Relation {
      * @param to Relation's child producer
      * @param inject Inject parameter name if have
      * @param code Condition to judge transfered data
+     * @param allowEmptyInput Allow empty (empty array) data transfers to relation's target
      */
-    public static create(from: Producer, to: Producer, inject?: string, code?: string | ((input: any) => boolean)): Relation {
+    public static create(from: Producer, to: Producer, inject?: string, code?: string | ((input: any) => boolean),
+        allowEmptyInput?: boolean): Relation {
         const relation = new Relation(from, to, inject, code);
+        relation.allowEmptyInput = allowEmptyInput || false;
         from.relation(relation);
         return relation;
     }

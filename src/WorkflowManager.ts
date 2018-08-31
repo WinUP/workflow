@@ -136,7 +136,7 @@ export class WorkflowManager {
                     }
                     const instance = new instanceActivator(producer.id);
                     instance.initialize(producer.parameters);
-                    instance.runningDelay = producer.replyDelay || 0;
+                    instance.runningDelay = producer.runningDelay || 0;
                     instance.replyDelay = producer.replyDelay || 0;
                     producers.push(instance);
                 });
@@ -163,7 +163,7 @@ export class WorkflowManager {
             if (!to) {
                 throw new GeneratorError(`Relation ${relation.from} -> ${relation.to} (nonexisted) is not available`);
             }
-            Relation.create(from, to, relation.inject, relation.condition || undefined);
+            Relation.create(from, to, relation.inject, relation.condition || undefined, relation.allowEmptyInput);
         });
         const result = new WorkflowManager();
         result.entrance = entrance;
