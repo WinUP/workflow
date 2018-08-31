@@ -35,7 +35,7 @@ export class CirculateSubWorkflowProducer extends SubWorkflowProducer {
         const data: IWorkflowResult[] = [];
         let previousResult: IWorkflowResult | undefined;
         while (onLoop(environment, context, previousResult)) {
-            const result = await workflow.run(input, environment).catch((e: Error) => e);
+            const result = await workflow.run(input, environment, params.get<object>('opt')).catch((e: Error) => e);
             if (result instanceof Error) {
                 throw new ProducerError('CirculateSubWorkflow', this.id, result);
             }

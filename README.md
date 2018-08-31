@@ -17,7 +17,7 @@ with features:
 
 ![](https://raw.githubusercontent.com/WinUP/workflow/master/docs/sequence.png)
 
-For example, in this case, run sequence should be ROOT -> 1 -> 2-1 -> 3 -> 2-2 -> 4.
+For example, in this case, run sequence should be ROOT -> 1, 2-1, 3 -> 2-2 -> 4.
 
 ## How to use
 
@@ -59,9 +59,15 @@ manager.output = b; // Optional. Set output will only return output's result for
 if (manager.unreachableNodes.length > 0) { // Check if workflow's DAG has unreachable nodes.
     throw new TypeError(`Has unreachable node!`);
 } else {
-    manager.run(/* input array */, /* Optional environment parameter */).then(...).catch(...);
+    manager.run(/* input array */, /* Optional environment parameter */, /* Optional options */).then(...).catch(...);
     // e.g.
-    manager.run([0]); // or manager.runWithAutopack(0) shortcut for single input situation
+    manager.run([0]);
+
+    // With environment variable
+    manager.run([0], { skip: 0 });
+
+    // With env and options
+    manager.run(0, { skip: 0 }, { singleInput: true, returnLast: true });
 
     // Way to receive any producer's data, not required
     manager.resultObserver = data => ...;

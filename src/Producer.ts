@@ -31,6 +31,16 @@ export abstract class Producer {
     public readonly id: string;
 
     /**
+     * Delayed millisecond before run producer
+     */
+    public runningDelay: number = 0;
+
+    /**
+     * Delayed millisecond before return producer's result
+     */
+    public replyDelay: number = 0;
+
+    /**
      * Indicate if producer has no parent
      */
     public get isRoot(): boolean {
@@ -143,16 +153,24 @@ export abstract class Producer {
      * Run this producer
      * @param input Input data
      */
-    public prepareExecute(input: any[], params: { [key: string]: any }, context: WorkflowContext): any[] | Promise<any[]> {
+    public async prepareExecute(input: any[], params: { [key: string]: any }, context: WorkflowContext): Promise<any[]> {
         const keys = Object.keys(params);
+        if (this.runningDelay > 0) {
+            await new Promise(resolve => setTimeout(resolve, this.runningDelay));
+        }
+        let result: any[] | Promise<any[]>;
         if (keys.length === 0) {
-            return this.produce(input, this.parameters, context);
+            result = this.produce(input, this.parameters, context);
         } else {
             const activeParameters = this.parameters.clone();
             activeParameters.patch(this.checkParameters(params));
             const output = this.produce(input, activeParameters, context);
-            return output;
+            result = output;
         }
+        if (this.replyDelay > 0) {
+            await new Promise(resolve => setTimeout(resolve, this.replyDelay));
+        }
+        return result;
     }
 
     /**

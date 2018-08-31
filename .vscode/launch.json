@@ -11,6 +11,9 @@
             "program": "${workspaceFolder}\\script\\test.js",
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
+            ],
+            "args": [
+                "--expose-gc"
             ]
         }
     ]

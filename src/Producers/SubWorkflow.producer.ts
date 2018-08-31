@@ -37,7 +37,24 @@ export class SubWorkflowProducer extends Producer {
                 type: ParameterType.Object,
                 optional: true,
                 default: {},
-                description: 'Environemnt object for sub workflow'
+                description: 'Extra environemnt information attached to sub workflow'
+            },
+            opt: {
+                type: ParameterType.Object,
+                optional: true,
+                properties: {
+                    singleInput: {
+                        type: ParameterType.Boolean,
+                        optional: true,
+                        description: 'Should consider whole input as one element'
+                    },
+                    returnLast: {
+                        type: ParameterType.Boolean,
+                        optional: true,
+                        description: 'Should only return the last producer\'s result'
+                    }
+                },
+                description: 'Workflow running options (IWorkflowOptions)'
             },
             onResult: {
                 type: ParameterType.Function,
@@ -52,7 +69,7 @@ export class SubWorkflowProducer extends Producer {
     public async produce(input: any[], params: ParameterTable, context: WorkflowContext): Promise<any[]> {
         const environment = SubWorkflowProducer.getEnv(params, context);
         const workflow = this.getWorkflow(params);
-        const result = await workflow.run(input, environment).catch((e: Error) => e);
+        const result = await workflow.run(input, environment, params.get<object>('opt')).catch((e: Error) => e);
         if (result instanceof Error) {
             throw new ProducerError('SubWorkflow', this.id, result);
         }

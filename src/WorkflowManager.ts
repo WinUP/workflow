@@ -1,12 +1,14 @@
 import { ConflictError, UnavailableError, GeneratorError } from './errors';
 import { IWorkflow, IRelation } from './Definition';
 import { ProducerActivator } from './ProducerActivator';
+import { IWorkflowOptions } from './IWorkflowOptions';
 import { WorkflowContext } from './WorkflowContext';
 import { IWorkflowResult } from './IWorkflowResult';
 import { IProduceResult } from './ProduceResult';
-import { asPromise } from './Utilities';
 import { Producer } from './Producer';
 import { Relation } from './Relation';
+
+type RunningItem = IProduceResult & { inject: { [key: string]: any } };
 
 /**
  * Workflow manager handles one workflow's status and may also stores workflow definition or just user other
@@ -134,6 +136,8 @@ export class WorkflowManager {
                     }
                     const instance = new instanceActivator(producer.id);
                     instance.initialize(producer.parameters);
+                    instance.runningDelay = producer.replyDelay || 0;
+                    instance.replyDelay = producer.replyDelay || 0;
                     producers.push(instance);
                 });
             }
@@ -229,19 +233,6 @@ export class WorkflowManager {
     }
 
     /**
-     * Run this workflow and pack import as array
-     * @param input Input data
-     * @param env Environment parameters, default is empty object
-     * @returns An array contains each ```Producer```'s result if no output set, regurally last one is the last ```Producer```'s result.
-     * If ```this.output``` is not null, this array will only contains ```this.output```'s result.
-     * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
-     * useful, typically it can highly reduce memory usage.
-     */
-    public async runWithAutopack<T, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<IWorkflowResult> {
-        return this.run([input], env);
-    }
-
-    /**
      * Run this workflow
      * @param input Input data
      * @param env Environment parameters, default is empty object
@@ -250,15 +241,20 @@ export class WorkflowManager {
      * @description If ```this.output``` is not null, algorithm will release memory when any ```Producer```'s data is not
      * useful, typically it can highly reduce memory usage.
      */
-    public async run<T extends Array<any>, U extends { [key: string]: any } = any>(input: T, env?: U): Promise<IWorkflowResult> {
+    public async run<T extends { [key: string]: any } = any>(input: any, env?: T, options: IWorkflowOptions = {})
+        : Promise<IWorkflowResult> {
         if (this._entrance == null) {
             throw new UnavailableError('Workflow has no entrance point');
         }
         if (this._isRunning) {
             throw new ConflictError('Workflow is already running');
         }
-        let running: (IProduceResult & { inject: { [key: string]: any } })[]
-            = [{ producer: this._entrance, data: input, inject: {} }]; // 需要被执行的处理器
+        if (options.singleInput) {
+            input = [input];
+        } else if (!(input instanceof Array)) {
+            throw new TypeError('When options.singleInput is not true, input data must be an array');
+        }
+        let running: RunningItem[] = [{ producer: this._entrance, data: input, inject: {} }]; // 需要被执行的处理器
         this._finishedNodes = [];
         this._skippedNodes = [];
         const finished: Producer[] = []; // 已执行完成的处理器
@@ -272,85 +268,89 @@ export class WorkflowManager {
         context.environment = env || {};
         this._isRunning = true;
         while (running.length > 0) {
-            const nextRound: (IProduceResult<any[]> & { inject: { [key: string]: any } })[] = [];
-            for (let i = -1; ++i < running.length;) {
-                if (this.pauseInjector) { // 在每个循环开始时处理暂停
-                    this.pauseInjector();
-                    this.pauseInjector = undefined;
-                    await this.pendingCallback;
-                    this.pendingCallback = undefined;
-                }
-                if (this.stopInjector) { // 在每个循环开始时确定是否被终止，此时直接跳出循环，running长度一定为0
-                    this.stopInjector();
-                    break;
-                }
+            const nextRound: RunningItem[] = [], activeItem: RunningItem[] = [];
+            if (this.pauseInjector) { // 在每个循环开始时处理暂停
+                this.pauseInjector();
+                this.pauseInjector = undefined;
+                await this.pendingCallback;
+                this.pendingCallback = undefined;
+            }
+            if (this.stopInjector) { // 在每个循环开始时确定是否被终止，此时直接跳出循环，running长度一定为0
+                this.stopInjector();
+                break;
+            }
+            // 寻找可执行节点
+            for (let i = -1, length = running.length; ++i < length;) {
                 const runner = running[i];
                 // 仅执行：目标节点不在下一轮执行队列中，目标节点满足执行前提
                 if (!nextRound.some(r => r.producer === runner.producer) && runner.producer.fitCondition(finished, skipped)) {
-                    let error: Error | null = null;
-                    let data: any[] | undefined;
-                    try {
-                        data = await asPromise<any[]>(runner.producer.prepareExecute(runner.data, runner.inject, context))
-                            .catch(e => error = e);
-                    } catch (e) {
-                        error = e;
-                    } finally {
-                        data = data || [];
-                    }
-                    if (error) {
-                        this._isRunning = false;
-                        throw error;
-                    }
-                    finished.push(runner.producer); // 标记执行完成
-                    if (this._output && runner.producer !== this._output) { needClean.push(runner.producer); } // 标记待清理
-                    this._finishedNodes.push(runner.producer.id);
-                    const runningResult = { producer: runner.producer, data: data };
-                    dataPool.push(runningResult); // 记录执行结果
-                    if (this.resultObserver) { this.resultObserver(runningResult); } // 如有必要发送执行结果
-                    if (runner.producer === this._output) { // 如果已经到达终点则直接跳出执行队列
-                        dataPool.splice(0, dataPool.length - 2);
-                        running = [];
-                        break;
-                    }
-                    if (context.cancelled) { // 如果被取消
-                        this.stop();
-                    }
-                    // 处理所有子节点
-                    for (let j = -1; ++j < runner.producer.children.length;) {
-                        const child = runner.producer.children[j];
-                        const suitableResult = data.filter(r => child.judge(r)); // 只放入通过条件判断的数据
-                        if (suitableResult.length > 0) {
-                            // 从下一轮执行队列中寻找目标节点
-                            let newRunner = nextRound.find(r => r.producer === child.to);
-                            if (!newRunner) { // 没有则新建执行要求
-                                newRunner = { producer: child.to, data: [], inject: {} };
-                                nextRound.push(newRunner);
-                            }
-                            if (child.inject) { // 参数注入情况
-                                newRunner.inject[child.inject] = suitableResult[0];
-                            } else { // 普通数据传递
-                                newRunner.data = [...newRunner.data, ...suitableResult];
-                            }
-                        } else if (!(running.some(p => p.producer === child.to) || nextRound.some(p => p.producer === child.to))
-                            && child.to.parents.every(v => finished.includes(v.from) || skipped.includes(v.from))) {
-                            this.skipProducer(child.to, skipped); // 全部数据均不满足条件时视为跳过目标节点
-                        }
-                    }
+                    activeItem.push(runner);
                 } else {
                     // 不执行则只做执行队列去重（数据合并），上述需要执行的情况在处理子节点时自带去重
                     const existedRunner = nextRound.find(r => r.producer === runner.producer);
                     if (existedRunner) {
-                        existedRunner.data = [...existedRunner.data, ...runner.data];
+                        existedRunner.data = existedRunner.data.concat(runner.data);
                         existedRunner.inject = { ...existedRunner.inject, ...runner.inject };
                     } else {
                         nextRound.push(runner);
                     }
                 }
             }
-            /// 如果设置终点则回收内存
+            let innerError: Error | undefined = undefined, isFinished: boolean = false;
+            // 并行执行所有可执行节点。不需担心关系检索，工作器执行结束到关系判定结束之间没有异步代码。
+            await Promise.all(activeItem.map(async runner => {
+                if (innerError) { return; }
+                let data: any[] | undefined;
+                try {
+                    data = await runner.producer.prepareExecute(runner.data, runner.inject, context);
+                } catch (e) {
+                    innerError = e instanceof Error ? e : new Error(e);
+                } finally {
+                    data = data || [];
+                }
+                if (innerError) { return; }
+                finished.push(runner.producer); // 标记执行完成
+                if (this._output && runner.producer !== this._output) { needClean.push(runner.producer); } // 标记待清理
+                this._finishedNodes.push(runner.producer.id);
+                const runningResult = { producer: runner.producer, data: data };
+                dataPool.push(runningResult); // 记录执行结果
+                if (this.resultObserver) { this.resultObserver(runningResult); } // 如有必要发送执行结果
+                if (runner.producer === this._output && !isFinished) { // 如果已经到达终点则直接跳出执行队列
+                    isFinished = true;
+                    dataPool.splice(0, dataPool.length - 2);
+                    running = [];
+                    return;
+                }
+                if (context.cancelled) { // 如果被取消
+                    return this.stop();
+                }
+                // 处理所有子节点
+                for (let i = -1, length = runner.producer.children.length; ++i < length;) {
+                    const child = runner.producer.children[i];
+                    const suitableResult = data.filter(r => child.judge(r)); // 只放入通过条件判断的数据
+                    if (suitableResult.length > 0 || child.allowEmptyInput) {
+                        // 从下一轮执行队列中寻找目标节点
+                        let newRunner = nextRound.find(r => r.producer === child.to);
+                        if (!newRunner) { // 没有则新建执行要求
+                            newRunner = { producer: child.to, data: [], inject: {} };
+                            nextRound.push(newRunner);
+                        }
+                        if (child.inject) { // 参数注入情况
+                            newRunner.inject[child.inject] = suitableResult[0];
+                        } else { // 普通数据传递
+                            newRunner.data = newRunner.data.concat(suitableResult);
+                        }
+                    } else if (!(running.some(p => p.producer === child.to) || nextRound.some(p => p.producer === child.to))
+                        && child.to.parents.every(v => finished.includes(v.from) || skipped.includes(v.from))) {
+                        this.skipProducer(child.to, skipped); // 全部数据均不满足条件时视为跳过目标节点
+                    }
+                }
+            }));
+            if (innerError) { throw innerError; }
+            /// 如果设置终点则回收内存（确保不将全部数据清除，因为可能存在没有运行到最后的工作流）
             if (this._output) {
                 let i: number = 0;
-                while (i < needClean.length) {
+                while (i < needClean.length && dataPool.length > 1) {
                     const producer = needClean[i];
                     if (producer.children.every(v => finished.includes(v.to) || skipped.includes(v.to))) {
                         const index = dataPool.findIndex(v => v.producer === producer);
@@ -359,13 +359,16 @@ export class WorkflowManager {
                         }
                         needClean.splice(i, 1);
                     } else {
-                        i++;
+                        ++i;
                     }
                 }
             }
             running = nextRound;
         }
-        const result = { data: dataPool, finished: this.stopInjector == null };
+        const result = {
+            data: options.returnLast ? dataPool.slice(dataPool.length - 1) : dataPool,
+            finished: this.stopInjector == null
+        };
         this.stopInjector = undefined;
         this._isRunning = false;
         return result;
@@ -404,11 +407,12 @@ export class WorkflowManager {
     private skipProducer(target: Producer, skipped: Producer[]): void {
         skipped.push(target);
         this._skippedNodes.push(target.id);
-        target.children.forEach(child => {
+        for (let i = -1, length = target.children.length; ++i < length;) {
+            const child = target.children[i];
             if (child.to.parents.every(p => skipped.includes(p.from))) {
                 this.skipProducer(child.to, skipped);
             }
-        });
+        }
     }
 
     private static getDefinition(definitions: (IWorkflow | ProducerActivator)[])

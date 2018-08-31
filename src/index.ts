@@ -1,4 +1,5 @@
 export * from './ProducerActivator';
+export * from './IWorkflowOptions';
 export * from './WorkflowContext';
 export * from './IWorkflowResult';
 export * from './WorkflowManager';

@@ -17,7 +17,14 @@ export interface IParameter {
     /**
      * Function definition in TypeScript
      */
-    functionType?: string;
+    functionType?: string | {
+        params: IParameter[],
+        result: IParameter
+    };
+    /**
+     * Available values
+     */
+    enum?: any[];
     /**
      * Is optional
      */

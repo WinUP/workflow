@@ -1,5 +1,6 @@
 var { WorkflowManager, Producer, Relation } = require('../dist');
 var { CirculateSubWorkflowProducer } = require('../dist/Producers/CirculateSubWorkflow.producer');
+var { WrapProducer }  = require('../dist/Producers/Wrap.producer');
 
 class LogProducer extends Producer {
     introduce() { return ''; }
@@ -28,37 +29,26 @@ var mainManager = new WorkflowManager();
 var entrance = new LogProducer('entrance');
 var test1 = new LogProducer('test1');
 var test2 = new LogProducer('test2');
-var test3 = new LogProducer('test3');
+var test3 = new WrapProducer('test3');
+var test4 = new LogProducer('test4');
 entrance.initialize({ log: 'entrance' });
 test1.initialize({ log: '1' });
+test1.runningDelay = 100;
 test2.initialize({ log: '2' });
-test3.initialize({ log: '3' });
+test3.initialize({ handler: () => {
+    console.log('terminate');
+    return [];
+} });
 Relation.create(entrance, test1);
 Relation.create(entrance, test2);
-Relation.create(entrance, test3);
+Relation.create(test2, test3);
+Relation.create(test1, test3);
+Relation.create(test3, test4);
 mainManager.entrance = entrance;
+mainManager.output = test4;
 
-var subWorkflow = new WorkflowManager();
-subWorkflow.entrance = new LogProducer('sub1');
-
-var subWorkflowProducer = new CirculateSubWorkflowProducer();
-subWorkflowProducer.initialize({
-    definition: subWorkflow,
-    env: {},
-    onResult: input => {
-        return input.map(v => v.data[0].data[0]);
-    },
-    onLoop: (env, context, output) => {
-        env.skip = env.skip || 0;
-        env.skip++;
-        return env.skip < 3;
-    }
-});
-
-Relation.create(test3, subWorkflowProducer);
-
-mainManager.runWithAutopack(0, { test: 1 })
+mainManager.run(0, { test: 1 }, { singleInput: true, returnLast: false })
     .then(async v => {
-        console.log(v.data[v.data.length - 1].data)
+        console.log(v.data)
     })
     .catch(async e => console.log(e));

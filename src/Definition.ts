@@ -40,6 +40,14 @@ export interface IProducer {
      * Description
      */
     description?: string;
+    /**
+     * Delayed millisecond before run producer
+     */
+    runningDelay?: number;
+    /**
+     * Delayed millisecond before return producer's result
+     */
+    replyDelay?: number;
 }
 
 /**

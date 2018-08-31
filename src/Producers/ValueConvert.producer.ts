@@ -114,7 +114,7 @@ export class ValueConvertProducer extends Producer {
                 const objectStructure = structure.find(v => typeof v === 'object' && v);
                 const hasTrue = structure.some(v => v === true);
                 if (!objectStructure && hasTrue) { // 无结构定义，存在true
-                    result = await source.map(v => ValueConvertProducer.pickValue(v, rules));
+                    result = await Promise.all(source.map(v => ValueConvertProducer.pickValue(v, rules)));
                 } else if (objectStructure) { // 有结构定义
                     result = await Promise.all(source.map(async v => {
                         if (typeof v === 'object' && v) { // 对象转换
@@ -151,9 +151,9 @@ export class ValueConvertProducer extends Producer {
                     const key = originalKeys[i];
                     if (availableKeys.includes(key)) {
                         if (source[key] === null) { // 空值转换
-                            result[key] = ValueConvertProducer.pickValue(null, rules);
+                            result[key] = await ValueConvertProducer.pickValue(null, rules);
                         } else if (source[key] === undefined) { // 空值转换
-                            result[key] = ValueConvertProducer.pickValue(undefined, rules);
+                            result[key] = await ValueConvertProducer.pickValue(undefined, rules);
                         } else if (source[key] instanceof Array) { // 数组转换
                             result[key] = await ValueConvertProducer.convert(structure[key], source[key], rules);
                         } else if (typeof source[key] === 'object') { // 递归转换对象，已确保true/false的转换

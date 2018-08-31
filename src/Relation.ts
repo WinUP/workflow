@@ -10,6 +10,11 @@ export class Relation {
     private _condition: string | ((input: any) => boolean);
 
     /**
+     * Allow empty (empty array) data transfers to relation's target, otherwise target will be disabled on this situation
+     */
+    public allowEmptyInput: boolean = false;
+
+    /**
      * Get relation's parent producer
      */
     public get from(): Producer {
