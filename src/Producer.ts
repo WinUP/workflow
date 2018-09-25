@@ -46,6 +46,11 @@ export abstract class Producer {
     public proceed: ((input: any[]) => any[] | Promise<any[]>) | string | undefined;
 
     /**
+     * If this function returns error, workflow will be terminated
+     */
+    public errorHandler: ((error: Error, params: ParameterTable, context: WorkflowContext) => any) | undefined;
+
+    /**
      * Indicate if producer has no parent
      */
     public get isRoot(): boolean {
@@ -164,13 +169,19 @@ export abstract class Producer {
             await new Promise(resolve => setTimeout(resolve, this.runningDelay));
         }
         let result: any[];
-        if (keys.length === 0) {
-            result = await this.produce(input, this.parameters, context);
-        } else {
-            const activeParameters = this.parameters.clone();
+        let activeParameters = this.parameters;
+        if (keys.length > 0) {
+            activeParameters = this.parameters.clone();
             activeParameters.patch(this.checkParameters(params));
-            const output = await this.produce(input, activeParameters, context);
-            result = output;
+        }
+        try {
+            result = await this.produce(input, activeParameters, context);
+        } catch (ex) {
+            if (!(ex instanceof Error)) { ex = new TypeError(ex); }
+            result = await this.onError(ex, activeParameters, context);
+            if (result instanceof Error) {
+                throw result;
+            }
         }
         if (this.replyDelay > 0) {
             await new Promise(resolve => setTimeout(resolve, this.replyDelay));
@@ -205,6 +216,16 @@ export abstract class Producer {
             return eval(`(function(input){${this.proceed}})(input)`);
         } else {
             return this.proceed(input);
+        }
+    }
+
+    private async onError(error: any, params: ParameterTable, context: WorkflowContext): Promise<any> {
+        if (!this.errorHandler) {
+            return error;
+        } else if (typeof this.errorHandler === 'string') {
+            return eval(`(function(error, params, context){${this.proceed}})(error, params, context)`);
+        } else {
+            return this.errorHandler(error, params, context);
         }
     }
 

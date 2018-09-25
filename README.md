@@ -243,7 +243,7 @@ circulate.initialize({
 
 ## Static workflow definition
 
-A JSON object can be created to define a workflow or part of workflow:
+A JSON object can be created to define a workflow or part of workflow (see [IWorkflow](https://github.com/WinUP/workflow/blob/master/src/Definition.ts#L4)):
 
 ```json
 {
@@ -254,7 +254,7 @@ A JSON object can be created to define a workflow or part of workflow:
 }
 ```
 
-Elements in producers should follow this structure:
+Elements in producers should follow this structure (see [IProducer](https://github.com/WinUP/workflow/blob/master/src/Definition.ts#L26)):
 
 ```json
 {
@@ -264,11 +264,12 @@ Elements in producers should follow this structure:
     "description": "String. Optional. Description of this producer.",
     "runningDelay": "Number. Optional. Delayed millisecond before run producer.",
     "replyDelay": "Number. Optional. Delayed millisecond before return producer's result.",
-    "proceed": "Function/Function's content in string. Optional. Function runs after proceed data (after applied delay time), it takes one param (input: any[]) and return an array."
+    "proceed": "Function/Function's content in string. Optional. Function runs after proceed data (after applied delay time), it takes one param (input: any[]) and return an array.",
+    "errorHandler": "Function/Function's content in string. Optional. Function that handles error. If this function still returns error, workflow will be terminated."
 }
 ```
 
-Elements in relations should follow this structure:
+Elements in relations should follow this structure (see [IRelation](https://github.com/WinUP/workflow/blob/master/src/Definition.ts#L60)):
 
 ```json
 {
@@ -350,7 +351,7 @@ manager.entrance = entrance;
 manager.output = test3;
 
 // Check error
-if (manager.unreachableNodes.length > 0) {
+if (manager.unreachableNodes.length > 0) { // unreachableNodes is computed field, call it as less as possible
     throw new TypeError(`Has unreachable node!`);
 }
 

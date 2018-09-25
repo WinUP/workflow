@@ -1,3 +1,6 @@
+import { WorkflowContext } from './WorkflowContext';
+import { ParameterTable } from './ParamaterTable';
+
 /**
  * Workflow definition
  */
@@ -52,6 +55,10 @@ export interface IProducer {
      * Function runs after proceed data (after applied delay time)
      */
     proceed?: ((input: any[]) => any[] | Promise<any[]>) | string;
+    /**
+     * If this function returns error, workflow will be terminated
+     */
+    errorHandler?: (error: Error, params: ParameterTable, context: WorkflowContext) => any;
 }
 
 /**

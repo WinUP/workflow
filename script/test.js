@@ -40,9 +40,12 @@ test1.proceed = input => {
 };
 test2.initialize({ log: '2' });
 test3.initialize({ handler: () => {
-    console.log('terminate');
-    return [];
+    throw new TypeError('terminated');
 } });
+test3.onError = error => {
+    console.log(`detect error: ${error}`);
+    return [];
+};
 Relation.create(entrance, test1);
 Relation.create(entrance, test2);
 Relation.create(test2, test3);

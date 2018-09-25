@@ -139,6 +139,7 @@ export class WorkflowManager {
                     instance.runningDelay = producer.runningDelay || 0;
                     instance.replyDelay = producer.replyDelay || 0;
                     instance.proceed = producer.proceed;
+                    instance.errorHandler = producer.errorHandler;
                     producers.push(instance);
                 });
             }
