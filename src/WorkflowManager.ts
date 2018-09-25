@@ -1,10 +1,6 @@
-import { ConflictError, UnavailableError, GeneratorError } from './errors';
-import { IWorkflow, IRelation } from './Definition';
-import { ProducerActivator } from './ProducerActivator';
-import { IWorkflowOptions } from './IWorkflowOptions';
+import { IWorkflowOptions, IProduceResult, IWorkflow, IRelation, IWorkflowResult, ProducerActivator } from './Models';
+import { ConflictError, UnavailableError, GeneratorError } from './Errors';
 import { WorkflowContext } from './WorkflowContext';
-import { IWorkflowResult } from './IWorkflowResult';
-import { IProduceResult } from './ProduceResult';
 import { Producer } from './Producer';
 import { Relation } from './Relation';
 

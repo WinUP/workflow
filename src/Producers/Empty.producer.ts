@@ -1,4 +1,4 @@
-import { IParameterDescriptor } from '../Parameter';
+import { IParameterDescriptor } from '../Models';
 import { Producer } from '../Producer';
 
 /**

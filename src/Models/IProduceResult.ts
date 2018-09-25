@@ -1,4 +1,4 @@
-import { Producer } from './Producer';
+import { Producer } from '../Producer';
 
 /**
  * Producer's running result

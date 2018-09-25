@@ -1,8 +1,8 @@
 import { isEqual } from 'lodash';
 
-import { IParameterDescriptor, ParameterType } from '../Parameter';
+import { IParameterDescriptor, ParameterType } from '../Models';
 import { ParameterTable } from '../ParamaterTable';
-import { ProducerError } from '../errors';
+import { ProducerError } from '../Errors';
 import { Producer } from '../Producer';
 
 /**

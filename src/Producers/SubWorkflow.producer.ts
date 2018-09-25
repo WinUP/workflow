@@ -1,13 +1,10 @@
 import { clone } from 'lodash';
 
-import { IParameterDescriptor, ParameterType } from '../Parameter';
-import { ProducerActivator } from '../ProducerActivator';
+import { IParameterDescriptor, ParameterType, IWorkflow, IWorkflowResult, ProducerActivator } from '../Models';
 import { WorkflowContext } from '../WorkflowContext';
 import { WorkflowManager } from '../WorkflowManager';
-import { IWorkflowResult } from '../IWorkflowResult';
 import { ParameterTable } from '../ParamaterTable';
-import { ProducerError } from '../errors';
-import { IWorkflow } from '../Definition';
+import { ProducerError } from '../Errors';
 import { Producer } from '../Producer';
 
 export class SubWorkflowProducer extends Producer {

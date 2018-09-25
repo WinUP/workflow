@@ -1,7 +1,6 @@
 import * as UUID from 'uuid';
 
-import { isSpecialParameter, SpecialParameterType } from './Definition';
-import { IParameterDescriptor } from './Parameter';
+import { isSpecialParameter, SpecialParameterType, IParameterDescriptor } from './Models';
 import { WorkflowContext } from './WorkflowContext';
 import { ParameterTable } from './ParamaterTable';
 import { Relation } from './Relation';
@@ -182,12 +181,13 @@ export abstract class Producer {
             if (result instanceof Error) {
                 throw result;
             }
-            if (!(result instanceof Array)) { result = [result]; }
         }
         if (this.replyDelay > 0) {
             await new Promise(resolve => setTimeout(resolve, this.replyDelay));
         }
-        return this.runProceed(result);
+        result = result instanceof Array ? result : [result];
+        result = await this.runProceed(result);
+        return result instanceof Array ? result : [result];
     }
 
     /**

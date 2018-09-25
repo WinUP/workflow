@@ -1,5 +1,4 @@
-var { WorkflowManager, Producer, Relation } = require('../dist');
-var { CirculateSubWorkflowProducer } = require('../dist/Producers/CirculateSubWorkflow.producer');
+var { WorkflowManager, Producer, Relation, ProducerError } = require('../dist');
 var { WrapProducer }  = require('../dist/Producers/Wrap.producer');
 
 class LogProducer extends Producer {
@@ -33,7 +32,7 @@ var test3 = new WrapProducer('test3');
 var test4 = new LogProducer('test4');
 entrance.initialize({ log: 'entrance' });
 test1.initialize({ log: '1' });
-test1.runningDelay = 2000;
+test1.runningDelay = 200;
 test1.proceed = input => {
     console.log('proceed: ' + input);
     return input;
@@ -43,8 +42,10 @@ test3.initialize({ handler: () => {
     throw new TypeError('terminated');
 } });
 test3.onError = error => {
-    console.log(`detect error: ${error}`);
-    return [];
+    const error1 = new ProducerError('SourceFlatten', '1', error);
+    const error2 = new ProducerError('CirculateSubWorkflow', '2', error1);
+    const error3 = new ProducerError('SubWorkflow', '3', error2);
+    return [error3.stack];
 };
 Relation.create(entrance, test1);
 Relation.create(entrance, test2);

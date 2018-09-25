@@ -1,4 +1,4 @@
-import { IProduceResult } from './ProduceResult';
+import { IProduceResult } from './Models';
 import { Producer } from './Producer';
 
 /**

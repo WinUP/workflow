@@ -1,9 +1,8 @@
-import { IParameterDescriptor, ParameterType } from '../Parameter';
+import { IWorkflowResult, IParameterDescriptor, ParameterType } from '../Models';
 import { SubWorkflowProducer } from './SubWorkflow.producer';
 import { WorkflowContext } from '../WorkflowContext';
-import { IWorkflowResult } from '../IWorkflowResult';
 import { ParameterTable } from '../ParamaterTable';
-import { ProducerError } from '../errors';
+import { ProducerError } from '../Errors';
 
 export type CirculateSubWorkflowOnLoop =
     (env: { [key: string]: any }, context: WorkflowContext, output: IWorkflowResult | undefined) => boolean;

@@ -1,4 +1,4 @@
-import { IProduceResult } from './ProduceResult';
+import { IProduceResult } from './IProduceResult';
 
 /**
  * Running result for workflow

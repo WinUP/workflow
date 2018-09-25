@@ -1,4 +1,4 @@
-import { IParameterDescriptor, ParameterType } from '../Parameter';
+import { IParameterDescriptor, ParameterType } from '../Models';
 import { WorkflowContext } from '../WorkflowContext';
 import { ParameterTable } from '../ParamaterTable';
 import { Producer } from '../Producer';

@@ -1,8 +1,9 @@
-import { IParameterDescriptor, ParameterType } from '../Parameter';
-import { ParameterTable } from '../ParamaterTable';
-import { ProducerError } from '../errors';
-import { Producer } from '../Producer';
 import * as JPQuery from '@ekifvk/jpquery';
+
+import { IParameterDescriptor, ParameterType } from '../Models';
+import { ParameterTable } from '../ParamaterTable';
+import { ProducerError } from '../Errors';
+import { Producer } from '../Producer';
 
 /**
  * Data picker producer
