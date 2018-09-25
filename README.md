@@ -265,7 +265,7 @@ Elements in producers should follow this structure (see [IProducer](https://gith
     "runningDelay": "Number. Optional. Delayed millisecond before run producer.",
     "replyDelay": "Number. Optional. Delayed millisecond before return producer's result.",
     "proceed": "Function/Function's content in string. Optional. Function runs after proceed data (after applied delay time), it takes one param (input: any[]) and return an array.",
-    "errorHandler": "Function/Function's content in string. Optional. Function that handles error. If this function still returns error, workflow will be terminated."
+    "errorHandler": "Function/Function's content in string. Optional. Function that handles error. If this function still returns error, workflow will be terminated. Must returns array."
 }
 ```
 

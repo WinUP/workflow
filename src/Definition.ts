@@ -58,7 +58,7 @@ export interface IProducer {
     /**
      * If this function returns error, workflow will be terminated
      */
-    errorHandler?: (error: Error, params: ParameterTable, context: WorkflowContext) => any;
+    errorHandler?: (error: Error, params: ParameterTable, context: WorkflowContext) => any[];
 }
 
 /**

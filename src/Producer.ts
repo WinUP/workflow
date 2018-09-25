@@ -48,7 +48,7 @@ export abstract class Producer {
     /**
      * If this function returns error, workflow will be terminated
      */
-    public errorHandler: ((error: Error, params: ParameterTable, context: WorkflowContext) => any) | undefined;
+    public errorHandler: ((error: Error, params: ParameterTable, context: WorkflowContext) => any[]) | undefined;
 
     /**
      * Indicate if producer has no parent
@@ -182,6 +182,7 @@ export abstract class Producer {
             if (result instanceof Error) {
                 throw result;
             }
+            if (!(result instanceof Array)) { result = [result]; }
         }
         if (this.replyDelay > 0) {
             await new Promise(resolve => setTimeout(resolve, this.replyDelay));
@@ -219,7 +220,7 @@ export abstract class Producer {
         }
     }
 
-    private async onError(error: any, params: ParameterTable, context: WorkflowContext): Promise<any> {
+    private async onError(error: any, params: ParameterTable, context: WorkflowContext): Promise<any[]> {
         if (!this.errorHandler) {
             return error;
         } else if (typeof this.errorHandler === 'string') {
