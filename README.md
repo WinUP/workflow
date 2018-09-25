@@ -260,8 +260,11 @@ Elements in producers should follow this structure:
 {
     "id": "String. ID of this producer",
     "type": "String. the type of this producer. Normally if producer class's name is <name>Producer, then <name> is the type of that producer.",
-    "parameters": "ParameterDescriptor. This producer's parameters.",
-    "description": "String. Optional. Description of this producer."
+    "parameters": "IParameterDescriptor. This producer's parameters.",
+    "description": "String. Optional. Description of this producer.",
+    "runningDelay": "Number. Optional. Delayed millisecond before run producer.",
+    "replyDelay": "Number. Optional. Delayed millisecond before return producer's result.",
+    "proceed": "Function/Function's content in string. Optional. Function runs after proceed data (after applied delay time), it takes one param (input: any[]) and return an array."
 }
 ```
 
@@ -271,8 +274,8 @@ Elements in relations should follow this structure:
 {
     "from": "String. Parent producer's ID.",
     "to": "String. Child producer's ID.",
-    "inject": "Inject parameter name.  Inject parameter means data transfered by this relation will be inject to producer as a temporaty \"initialize\" parameter only for this round of produce.",
-    "condition": "Null or function/function's content in string. It takes one param and should return true/false. Condition to judge the data that pass through this relation (in JavaScript)."
+    "inject": "String. Optional. Inject parameter name.  Inject parameter means data transfered by this relation will be inject to producer as a temporaty \"initialize\" parameter only for this round of produce.",
+    "condition": "Function/Function's content in string. Optional. It takes one param (input: any) and return true/false. Condition to judge the data that pass through this relation (in JavaScript)."
 }
 ```
 

@@ -33,7 +33,7 @@ export interface IProducer {
      */
     id: string;
     /**
-     * Parameters for initializer
+     * Initial parameters
      */
     parameters: { [key: string]: any };
     /**
@@ -48,6 +48,10 @@ export interface IProducer {
      * Delayed millisecond before return producer's result
      */
     replyDelay?: number;
+    /**
+     * Function runs after proceed data (after applied delay time)
+     */
+    proceed?: ((input: any[]) => any[] | Promise<any[]>) | string;
 }
 
 /**

@@ -138,6 +138,7 @@ export class WorkflowManager {
                     instance.initialize(producer.parameters);
                     instance.runningDelay = producer.runningDelay || 0;
                     instance.replyDelay = producer.replyDelay || 0;
+                    instance.proceed = producer.proceed;
                     producers.push(instance);
                 });
             }

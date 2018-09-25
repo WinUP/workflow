@@ -33,7 +33,11 @@ var test3 = new WrapProducer('test3');
 var test4 = new LogProducer('test4');
 entrance.initialize({ log: 'entrance' });
 test1.initialize({ log: '1' });
-test1.runningDelay = 100;
+test1.runningDelay = 2000;
+test1.proceed = input => {
+    console.log('proceed: ' + input);
+    return input;
+};
 test2.initialize({ log: '2' });
 test3.initialize({ handler: () => {
     console.log('terminate');

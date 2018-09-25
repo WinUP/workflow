@@ -10,7 +10,7 @@ import { clone } from 'lodash';
      * Get value with key
      * @param key Parameter's key
      */
-    public get<T = any>(key: string): T {
+    public get<T = any>(key: string): T  | undefined {
         return this.storage[key];
     }
 

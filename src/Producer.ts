@@ -41,6 +41,11 @@ export abstract class Producer {
     public replyDelay: number = 0;
 
     /**
+     * Function runs after proceed data (after applied delay time)
+     */
+    public proceed: ((input: any[]) => any[] | Promise<any[]>) | string | undefined;
+
+    /**
      * Indicate if producer has no parent
      */
     public get isRoot(): boolean {
@@ -158,19 +163,19 @@ export abstract class Producer {
         if (this.runningDelay > 0) {
             await new Promise(resolve => setTimeout(resolve, this.runningDelay));
         }
-        let result: any[] | Promise<any[]>;
+        let result: any[];
         if (keys.length === 0) {
-            result = this.produce(input, this.parameters, context);
+            result = await this.produce(input, this.parameters, context);
         } else {
             const activeParameters = this.parameters.clone();
             activeParameters.patch(this.checkParameters(params));
-            const output = this.produce(input, activeParameters, context);
+            const output = await this.produce(input, activeParameters, context);
             result = output;
         }
         if (this.replyDelay > 0) {
             await new Promise(resolve => setTimeout(resolve, this.replyDelay));
         }
-        return result;
+        return this.runProceed(result);
     }
 
     /**
@@ -192,6 +197,16 @@ export abstract class Producer {
     public abstract parameterStructure(): IParameterDescriptor;
 
     public abstract produce(input: any[], params: ParameterTable, context: WorkflowContext): any[] | Promise<any[]>;
+
+    private async runProceed(input: any[]): Promise<any[]> {
+        if (!this.proceed) {
+            return input;
+        } else if (typeof this.proceed === 'string') {
+            return eval(`(function(input){${this.proceed}})(input)`);
+        } else {
+            return this.proceed(input);
+        }
+    }
 
     private static parseParams(params: { [key: string]: any }): { [key: string]: any } {
         if (typeof params !== 'object' || params == null) {
